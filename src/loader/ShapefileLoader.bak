@@ -12,17 +12,44 @@ export class ShapefileLoader {
         const matLine = new LineMaterial({
             color: 0xff0000,
             linewidth: 3, // in pixels
-            resolution: new THREE.Vector2(1000, 1000),
+            resolution: new THREE.Vector3(1000, 1000),
             dashed: false,
         });
 
         const features = await this.loadShapefileFeatures(path);
         const node = new THREE.Object3D();
 
-        for (const feature of features) {
-            const fnode = this.featureToSceneNode(feature, matLine);
-            node.add(fnode);
+        let location = {
+            x: 0,
+            y: 0,
+            z: 0,
+        };
+        function distance(originalLocation, newLocation) {
+            const distance = Math.sqrt(Math.pow(originalLocation.x - newLocation.x, 2) + Math.pow(originalLocation.y - newLocation.y, 2) + Math.pow(originalLocation.z - newLocation.z, 2));
+
+            return distance;
         }
+
+        features.forEach((feature, index) => {
+            let newLocation = {
+                x: feature.geometry.coordinates[0],
+                y: feature.geometry.coordinates[1],
+                z: feature.properties.Height_ftU,
+            };
+
+            if (index === 0) {
+                location.x = feature.geometry.coordinates[0];
+                location.y = feature.geometry.coordinates[1];
+                location.z = feature.properties.Height_ftU;
+            }
+
+            if (distance(location, newLocation) > 100) {
+                const fnode = this.featureToSceneNode(feature, matLine);
+                node.add(fnode);
+
+                location = newLocation;
+            }
+        });
 
         let setResolution = (x, y) => {
             matLine.resolution.set(x, y);
@@ -48,14 +75,18 @@ export class ShapefileLoader {
         }
 
         if (feature.geometry.type === 'Point') {
-            let sg = new THREE.SphereGeometry(1, 18, 18);
+            let sg = new THREE.SphereGeometry(0.25, 30, 30);
             let sm = new THREE.MeshNormalMaterial();
             let s = new THREE.Mesh(sg, sm);
 
             let [long, lat] = geometry.coordinates;
             let pos = transform.forward([long, lat]);
 
-            s.position.set(...pos, 20);
+            if (feature.properties.Height_ftU) {
+                s.position.set(...pos, feature.properties.Height_ftU);
+            } else {
+                s.position.set(...pos, 20);
+            }
 
             s.scale.set(10, 10, 10);
 
@@ -99,17 +130,16 @@ export class ShapefileLoader {
 
                 let min = new THREE.Vector3(Infinity, Infinity, Infinity);
                 for (let i = 0; i < pc.length; i++) {
-                    let [long, lat, alt] = pc[i];
+                    let [long, lat] = pc[i];
                     let pos = transform.forward([long, lat]);
 
                     min.x = Math.min(min.x, pos[0]);
                     min.y = Math.min(min.y, pos[1]);
-                    min.z = Math.min(min.z, alt);
+                    min.z = Math.min(min.z, 20);
 
-                    coordinates.push(...pos, alt);
-
+                    coordinates.push(...pos, 20);
                     if (i > 0 && i < pc.length - 1) {
-                        coordinates.push(...pos, alt);
+                        coordinates.push(...pos, 20);
                     }
                 }
 
