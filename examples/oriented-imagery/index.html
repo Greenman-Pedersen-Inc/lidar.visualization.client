@@ -112,6 +112,24 @@
                     viewer.scene.add360Images(images);
                 });
             }
+            function loadOrientedImageCube() {
+                // load the original images from the ladybug camera (flat)
+                Potree.OrientedImageLoader.load('./camera_params_0.xml', './imagery/image_coordinates_0.txt', parsedMetadata, viewer).then((images) => {
+                    viewer.scene.addOrientedImages(images);
+                    Potree.OrientedImageLoader.load('./camera_params_1.xml', './imagery/image_coordinates_1.txt', parsedMetadata, viewer).then((images) => {
+                        viewer.scene.addOrientedImages(images);
+                        Potree.OrientedImageLoader.load('./camera_params_2.xml', './imagery/image_coordinates_2.txt', parsedMetadata, viewer).then((images) => {
+                            viewer.scene.addOrientedImages(images);
+                            Potree.OrientedImageLoader.load('./camera_params_3.xml', './imagery/image_coordinates_3.txt', parsedMetadata, viewer).then((images) => {
+                                viewer.scene.addOrientedImages(images);
+                                Potree.OrientedImageLoader.load('./camera_params_4.xml', './imagery/image_coordinates_4.txt', parsedMetadata, viewer).then((images) => {
+                                    viewer.scene.addOrientedImages(images);
+                                });
+                            });
+                        });
+                    });
+                });
+            }
 
             window.viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
             window.viewer.renderer.sortObjects = true;
@@ -144,32 +162,11 @@
                 material.pointSizeType = Potree.PointSizeType.FIXED;
                 material.shape = Potree.PointShape.SQUARE;
 
-                pointcloud.material.depthTest = false;
-                pointcloud.material.depthWrite = false;
-                pointcloud.renderOrder = 10;
-
                 Potree.Images360Loader.load(imagery360Path, imagery360DataFile, viewer, { metadata: parsedMetadata }).then((images) => {
                     scene.addPointCloud(pointcloud);
                     viewer.scene.add360Images(images);
-                    loadShapeFile('./GIS/elevation_test.shp');
+                    // loadShapeFile('./GIS/elevation_test.shp');
                 });
-
-                // Potree.OrientedImageLoader.load('./camera_params_0.xml', './imagery/image_coordinates_0.txt', parsedMetadata, viewer).then((images) => {
-                //     // viewer.scene.addOrientedImages(images);
-
-                //     // Potree.OrientedImageLoader.load('./camera_params_1.xml', './imagery/image_coordinates_1.txt', parsedMetadata, viewer).then((images) => {
-                //     //     viewer.scene.addOrientedImages(images);
-                //     //     Potree.OrientedImageLoader.load('./camera_params_2.xml', './imagery/image_coordinates_2.txt', parsedMetadata, viewer).then((images) => {
-                //     //         viewer.scene.addOrientedImages(images);
-                //     //         Potree.OrientedImageLoader.load('./camera_params_3.xml', './imagery/image_coordinates_3.txt', parsedMetadata, viewer).then((images) => {
-                //     //             viewer.scene.addOrientedImages(images);
-                //     //             Potree.OrientedImageLoader.load('./camera_params_4.xml', './imagery/image_coordinates_4.txt', parsedMetadata, viewer).then((images) => {
-                //     //                 viewer.scene.addOrientedImages(images);
-                //     //             });
-                //     //         });
-                //     //     });
-                //     // });
-                // });
             });
         </script>
     </body>

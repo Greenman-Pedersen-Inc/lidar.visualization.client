@@ -1,6 +1,8 @@
 import * as THREE from '../../libs/three.js/build/three.module.js';
 
 let animation;
+let classificationSelector;
+// const baseURL = 'http://127.0.0.1:65000/v1/';
 const baseURL = 'https://gpi-inspections.com/gpi-viewer/data/v1/';
 const playButton = document.getElementById('play-button');
 const pauseButton = document.getElementById('pause-button');
@@ -10,7 +12,7 @@ window.viewer = new Potree.Viewer(document.getElementById('potree_render_area'))
 
 viewer.setEDLEnabled(true);
 // viewer.setFOV(60);
-viewer.setPointBudget(2_000_000);
+viewer.setPointBudget(500_000);
 viewer.loadSettingsFromURL();
 viewer.loadGUI(() => {
     $('.potree_menu_toggle').addClass('hidden');
@@ -43,30 +45,6 @@ function loadMenu(rootDirectory) {
             return data.flatList;
         });
 }
-function loadRouteTest(folderInfo, firstSegment = false) {
-    try {
-        const metadataPath = `${folderInfo}/metadata.json`;
-
-        Potree.loadPointCloud(metadataPath, folderInfo.split('/').pop().split('.')[0], (e) => {
-            let scene = viewer.scene;
-            let pointcloud = e.pointcloud;
-            let material = pointcloud.material;
-
-            material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-            material.size = 0.6;
-
-            scene.addPointCloud(pointcloud);
-
-            if (firstSegment) positionCamera(metadataPath);
-            // createAnimation(parentNodeText, nodeText);
-            // loadPhotoPoints(folderInfo.imagery, roadSegment);
-        });
-    } catch (error) {
-        console.log(error);
-    } finally {
-    }
-    // Load and add point cloud to scene
-}
 function loadRoute(folderPath, roadSegment = '') {
     try {
         const metadataPath = `${folderPath}/metadata.json`;
@@ -75,7 +53,7 @@ function loadRoute(folderPath, roadSegment = '') {
 
         mapContainer.classList.add('hidden');
         potreeContainer.classList.remove('hidden');
-        Potree.loadPointCloud(metadataPath, roadSegment, (e) => {
+        Potree.loadPointCloud(metadataPath, roadSegment, async (e) => {
             let scene = viewer.scene;
             let pointcloud = e.pointcloud;
             let material = pointcloud.material;
@@ -86,11 +64,13 @@ function loadRoute(folderPath, roadSegment = '') {
 
             scene.addPointCloud(pointcloud);
 
-            new ClassificationSelector('classification-container');
+            if (!classificationSelector) {
+                classificationSelector = new ClassificationSelector('classification-container');
+            }
 
-            positionCamera(metadataPath);
+            const parsedMetadata = await positionCamera(metadataPath);
             // createAnimation(parentNodeText, nodeText);
-            loadPhotoPoints(folderPath, roadSegment);
+            loadPhotoPoints(folderPath, roadSegment, parsedMetadata);
         });
     } catch (error) {
         console.log(error);
@@ -101,60 +81,37 @@ function loadRoute(folderPath, roadSegment = '') {
 async function positionCamera(metadataPath) {
     const metadataRequest = await fetch(metadataPath);
     const metadata = await metadataRequest.json();
-    console.log(metadata);
 
     let centroidX = metadata.boundingBox.min[0] + (metadata.boundingBox.max[0] - metadata.boundingBox.min[0]) / 2;
     let centroidY = metadata.boundingBox.min[1] + (metadata.boundingBox.max[1] - metadata.boundingBox.min[1]) / 2;
 
     viewer.scene.view.position.set(centroidX, centroidY, metadata.boundingBox.max[2]);
     viewer.scene.view.lookAt(new THREE.Vector3(centroidX, centroidY, metadata.boundingBox.min[2]));
+
+    return metadata;
 }
-function loadPhotoPoints(baseFolder, roadSegment) {
+function loadPhotoPoints(baseFolder, roadSegment, parsedMetadata) {
     // this file contains coordinates, orientation and filenames of the images:
     // http://5.9.65.151/mschuetz/potree/resources/pointclouds/helimap/360/Drive2_selection/coordinates.txt
 
     // "D:\input\00000021_NJ21\360_Imagery\LB5, Camera Ladybug.csv"
 
-    const imageryPath = `${baseFolder}`;
+    const imagery360Path = `${baseFolder}`;
+    let imagery360DataFile = 'coordinates.txt';
 
     // the 360 loader loads images from the csv
-    Potree.Images360Loader.load(imageryPath, viewer, {}).then((images) => {
+    Potree.Images360Loader.load(imagery360Path, imagery360DataFile, viewer, { metadata: parsedMetadata }).then((images) => {
         viewer.scene.add360Images(images);
     });
-}
-async function createAnimation(parentNodeText, nodeText) {
-    animation = new Potree.CameraAnimation(viewer);
-    animation.duration = 400;
-
-    const positions = [];
-
-    const targets = [];
-
-    for (let i = 0; i < positions.length; i++) {
-        if (i % 100 === 0) {
-            let position = positions[i];
-            let target = targets[i];
-
-            position[2] += 0;
-            target[2] += 0;
-
-            const cp = animation.createControlPoint();
-
-            cp.position.set(...position);
-            cp.target.set(...target);
-        }
-    }
-
-    viewer.scene.addCameraAnimation(animation);
-    animation.play();
 }
 function Toolbar(attachPoint) {
     const self = this;
 
     this.measuringTool = viewer.measuringTool;
-    this.createToolIcon = (icon, title, callback) => {
+    this.createToolIcon = (icon, title, callback, id) => {
         let element = $(`
-        <img src="${icon}"
+        <img ${id ? `id = "${id}"` : ''} 
+            src="${icon}"
             style="width: 32px; height: 32px"
             class="button-icon"
             data-i18n="${title}" />
@@ -336,7 +293,7 @@ function Toolbar(attachPoint) {
     elToolbar.append(
         this.createToolIcon(Potree.resourcePath + '/icons/profile.svg', '[title]tt.height_profile', () => {
             $('#menu_measurements').next().slideDown();
-            let profile = this.profileTool.startInsertion();
+            let profile = viewer.profileTool.startInsertion();
 
             let measurementsRoot = $('#jstree_scene').jstree().get_json('measurements');
             let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === profile.uuid);
@@ -344,6 +301,13 @@ function Toolbar(attachPoint) {
             $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
         })
     );
+
+    // View Profile
+    let viewProfile = this.createToolIcon(Potree.resourcePath + '/icons/eye.svg', '[title]tt.remove_all_measurement', () => {
+        let test = document.getElementById('show_2d_profile');
+        test.click();
+    });
+    elToolbar.append(viewProfile);
 
     // ANNOTATION
     elToolbar.append(
@@ -516,14 +480,65 @@ function ClassificationSelector(attachPoint) {
     });
 }
 
-playButton.addEventListener('click', (event) => {
-    viewer.setPointBudget(250_000);
+function loadRouteTest(folderInfo, firstSegment = false) {
+    try {
+        const metadataPath = `${folderInfo}/metadata.json`;
+
+        Potree.loadPointCloud(metadataPath, folderInfo.split('/').pop().split('.')[0], (e) => {
+            let scene = viewer.scene;
+            let pointcloud = e.pointcloud;
+            let material = pointcloud.material;
+
+            material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
+            material.size = 0.6;
+
+            scene.addPointCloud(pointcloud);
+
+            if (firstSegment) positionCamera(metadataPath);
+            // createAnimation(parentNodeText, nodeText);
+            // loadPhotoPoints(folderInfo.imagery, roadSegment);
+        });
+    } catch (error) {
+        console.log(error);
+    } finally {
+    }
+    // Load and add point cloud to scene
+}
+async function createAnimation(parentNodeText, nodeText) {
+    animation = new Potree.CameraAnimation(viewer);
+    animation.duration = 400;
+
+    const positions = [];
+
+    const targets = [];
+
+    for (let i = 0; i < positions.length; i++) {
+        if (i % 100 === 0) {
+            let position = positions[i];
+            let target = targets[i];
+
+            position[2] += 0;
+            target[2] += 0;
+
+            const cp = animation.createControlPoint();
+
+            cp.position.set(...position);
+            cp.target.set(...target);
+        }
+    }
+
+    viewer.scene.addCameraAnimation(animation);
     animation.play();
-});
-pauseButton.addEventListener('click', (event) => {
-    viewer.setPointBudget(10_000_000);
-    animation.pause();
-});
+}
+
+// playButton.addEventListener('click', (event) => {
+//     viewer.setPointBudget(250_000);
+//     animation.play();
+// });
+// pauseButton.addEventListener('click', (event) => {
+//     viewer.setPointBudget(10_000_000);
+//     animation.pause();
+// });
 closeLidarViewerButton.addEventListener('click', (event) => {
     const mapContainer = document.getElementById('map-container');
     const potreeContainer = document.getElementById('potree-container');
@@ -586,19 +601,18 @@ require(['esri/layers/GeoJSONLayer', 'esri/Map', 'esri/renderers/Renderer', 'esr
             );
         });
 
-        let renderer = {
+        let runCoverageRenderer = {
             type: 'simple', // autocasts as new SimpleRenderer()
             symbol: {
                 type: 'simple-fill', // autocasts as new SimpleFillSymbol()
-                color: [255, 128, 0, 0.5],
+                color: [0, 0, 0, 0.25],
                 outline: {
                     // autocasts as new SimpleLineSymbol()
                     width: 1,
-                    color: 'white',
+                    color: 'navy',
                 },
             },
         };
-
         let openRouteAction = {
             // This text is displayed as a tooltip
             title: 'Open Route',
@@ -616,7 +630,7 @@ require(['esri/layers/GeoJSONLayer', 'esri/Map', 'esri/renderers/Renderer', 'esr
         };
         const runCoverage = new GeoJSONLayer({
             url: baseURL + 'run_coverage',
-            renderer: renderer,
+            renderer: runCoverageRenderer,
             fields: [
                 {
                     name: 'OBJECTID',
@@ -650,20 +664,74 @@ require(['esri/layers/GeoJSONLayer', 'esri/Map', 'esri/renderers/Renderer', 'esr
                 },
             ],
             popupTemplate: runCoveragePopupTemplate,
+            definitionExpression: "NAME not like '00000080_EB%' and NAME not like '00000287_SB%' and NAME not like '00000295_SB%'",
         });
 
-        const stateOutline = new GeoJSONLayer({
-            url: 'https://services2.arcgis.com/XVOqAjTOJ5P6ngMu/arcgis/rest/services/NJ_State_Boundary/FeatureServer/3/query?outFields=*&where=1%3D1&f=geojson',
-            renderer: {
-                type: 'simple', // autocasts as new SimpleRenderer()
-                symbol: {
-                    type: 'simple-fill',
-                    color: [51, 51, 204, 0.2],
-                }, // autocasts as new SimpleFillSymbol()
+        let rockSlopeRenderer = {
+            type: 'simple', // autocasts as new SimpleRenderer()
+            symbol: {
+                type: 'simple-line', // autocasts as new SimpleFillSymbol()
+                color: [0, 255, 255],
+                width: 5,
             },
+        };
+        const rockSlopePopupTemplate = {
+            title: 'Route Segment {NAME}',
+            content: (feature) => {
+                console.log(feature);
+            },
+            actions: [openRouteAction],
+        };
+        const rockSlopeCoverage = new GeoJSONLayer({
+            url: baseURL + 'rock_slope',
+            renderer: rockSlopeRenderer,
+            fields: [
+                {
+                    name: 'OBJECTID',
+                    alias: 'OBJECTID',
+                    type: 'oid',
+                },
+                {
+                    name: 'NAME',
+                    alias: 'Route Segment Name',
+                    type: 'string',
+                },
+                {
+                    name: 'path',
+                    alias: 'path',
+                    type: 'string',
+                },
+            ],
+            content: [
+                {
+                    type: 'fields', // Autocasts as new FieldsContent()
+                    // Autocasts as new FieldInfo[]
+                    fieldInfos: [
+                        {
+                            fieldName: 'NAME',
+                        },
+                        {
+                            fieldName: 'path',
+                            visible: false,
+                        },
+                    ],
+                },
+            ],
         });
-        map.add(stateOutline); // adds the layer to the map
+
+        // const stateOutline = new GeoJSONLayer({
+        //     url: 'https://services2.arcgis.com/XVOqAjTOJ5P6ngMu/arcgis/rest/services/NJ_State_Boundary/FeatureServer/3/query?outFields=*&where=1%3D1&f=geojson',
+        //     renderer: {
+        //         type: 'simple', // autocasts as new SimpleRenderer()
+        //         symbol: {
+        //             type: 'simple-fill',
+        //             color: [51, 51, 204, 0.2],
+        //         }, // autocasts as new SimpleFillSymbol()
+        //     },
+        // });
+        // map.add(stateOutline); // adds the layer to the map
         map.add(runCoverage); // adds the layer to the map
+        map.add(rockSlopeCoverage); // adds the layer to the map
     });
 
     // });

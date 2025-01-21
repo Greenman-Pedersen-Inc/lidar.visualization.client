@@ -42,6 +42,13 @@ export class Images360 extends EventDispatcher {
         this.images = [];
         this.node = new THREE.Object3D();
 
+        this.onPointerMove = (event) => {
+            // calculate pointer position in normalized device coordinates
+            // (-1 to +1) for both components
+
+            console.log(1);
+        };
+
         this.sphere = new THREE.Mesh(sgHigh, sm);
         this.sphere.visible = false;
         this.sphere.scale.set(1000, 1000, 1000);
@@ -52,6 +59,7 @@ export class Images360 extends EventDispatcher {
         this.focusedImage = null;
 
         let elUnfocus = document.createElement('input');
+        elUnfocus.className = 'unfocus-button'
         elUnfocus.type = 'button';
         elUnfocus.value = 'unfocus';
         elUnfocus.style.position = 'absolute';
@@ -65,36 +73,6 @@ export class Images360 extends EventDispatcher {
         this.domRoot = viewer.renderer.domElement.parentElement;
         this.domRoot.appendChild(elUnfocus);
         this.elUnfocus.style.display = 'none';
-
-        let elWithdraw = document.createElement('input');
-        elWithdraw.type = 'button';
-        elWithdraw.value = 'Withdraw';
-        elWithdraw.style.position = 'absolute';
-        elWithdraw.style.right = '150px';
-        elWithdraw.style.bottom = '10px';
-        elWithdraw.style.zIndex = '10000';
-        elWithdraw.style.fontSize = '2em';
-        elWithdraw.addEventListener('click', () => this.advance());
-        this.elWithdraw = elWithdraw;
-
-        this.domRoot = viewer.renderer.domElement.parentElement;
-        this.domRoot.appendChild(elWithdraw);
-        this.elWithdraw.style.display = 'none';
-
-        let elAdvance = document.createElement('input');
-        elAdvance.type = 'button';
-        elAdvance.value = 'Advance';
-        elAdvance.style.position = 'absolute';
-        elAdvance.style.right = '300px';
-        elAdvance.style.bottom = '10px';
-        elAdvance.style.zIndex = '10000';
-        elAdvance.style.fontSize = '2em';
-        elAdvance.addEventListener('click', () => this.advance());
-        this.elAdvance = elAdvance;
-
-        this.domRoot = viewer.renderer.domElement.parentElement;
-        this.domRoot.appendChild(elAdvance);
-        this.elAdvance.style.display = 'none';
 
         viewer.addEventListener('update', () => {
             this.update(viewer);
@@ -129,16 +107,18 @@ export class Images360 extends EventDispatcher {
         return this._visible;
     }
 
-    focus(image360) {
+    focus(image360, refocus = false) {
         if (this.focusedImage !== null) {
             this.unfocus();
         }
 
-        previousView = {
-            controls: this.viewer.controls,
-            position: this.viewer.scene.view.position.clone(),
-            target: viewer.scene.view.getPivot(),
-        };
+        if (!refocus) {
+            previousView = {
+                controls: this.viewer.controls,
+                position: this.viewer.scene.view.position.clone(),
+                target: viewer.scene.view.getPivot(),
+            };
+        }
 
         this.viewer.setControls(this.viewer.orbitControls);
         this.viewer.orbitControls.doubleClockZoomEnabled = false;
@@ -155,6 +135,19 @@ export class Images360 extends EventDispatcher {
             this.sphere.visible = true;
             this.sphere.material.map = image360.texture;
             this.sphere.material.needsUpdate = true;
+
+            if (this.node.children.map((object) => object.uuid).indexOf(image360.forwardArrow.uuid) >= 0) {
+                image360.forwardArrow.visible = true;
+            } else {
+                this.node.add(image360.forwardArrow);
+                image360.forwardArrow.visible = true;
+            }
+            if (this.node.children.map((object) => object.uuid).indexOf(image360.backwardArrow.uuid) >= 0) {
+                image360.backwardArrow.visible = true;
+            } else {
+                this.node.add(image360.backwardArrow);
+                image360.backwardArrow.visible = true;
+            }
         });
 
         {
@@ -171,19 +164,60 @@ export class Images360 extends EventDispatcher {
         let newCamPos = target.clone().sub(move);
 
         viewer.scene.view.setView(newCamPos, target, 500);
+        window.addEventListener('click', this.arrowHoverIntersect);
 
         this.focusedImage = image360;
 
         this.elUnfocus.style.display = '';
-        this.elAdvance.style.display = '';
-        this.elWithdraw.style.display = '';
+    }
+
+    arrowHoverIntersect(event) {
+        let images360 = viewer.scene.images360[0];
+        let mouse = viewer.inputHandler.mouse;
+        let camera = viewer.scene.getActiveCamera();
+        let domElement = viewer.renderer.domElement;
+
+        let ray = Potree.Utils.mouseToRay(mouse, camera, domElement.clientWidth, domElement.clientHeight);
+
+        // let tStart = performance.now();
+        raycaster.ray.copy(ray);
+
+        let intersections = raycaster.intersectObjects(images360.node.children);
+
+        if (intersections.length === 0) {
+            // label.visible = false;
+
+            return;
+        } else if (intersections.length > 1) {
+            let sphere = intersections[0];
+            let arrow = intersections[1];
+
+            try {
+                if (arrow.object.uuid === sphere.object.image360.forwardArrow.uuid) {
+                    let nextImage = images360.images.map((image) => image.file).findIndex((item) => item.includes(sphere.object.image360.nextPosition.nextFilename));
+                    images360.refocus(images360.images[nextImage]);
+                } else if (arrow.object.uuid === sphere.object.image360.backwardArrow.uuid) {
+                    let previousImage = images360.images.map((image) => image.file).findIndex((item) => item.includes(sphere.object.image360.previousPosition.previousFilename));
+                    images360.refocus(images360.images[previousImage]);
+                }
+            } catch (error) {}
+        }
+    }
+
+    refocus(image360) {
+        this.unfocus();
+        this.focus(image360, true);
     }
 
     unfocus() {
+        window.removeEventListener('click', this.arrowHoverIntersect);
+
         this.selectingEnabled = true;
 
         for (let image of this.images) {
             image.mesh.visible = true;
+            image.forwardArrow.visible = false;
+            image.backwardArrow.visible = false;
         }
 
         let image = this.focusedImage;
@@ -210,8 +244,6 @@ export class Images360 extends EventDispatcher {
         this.focusedImage = null;
 
         this.elUnfocus.style.display = 'none';
-        this.elAdvance.style.display = 'none';
-        this.elWithdraw.style.display = 'none';
     }
 
     load(image360) {
@@ -244,10 +276,6 @@ export class Images360 extends EventDispatcher {
         let intersection = intersections[0];
         currentlyHovered = intersection.object;
         currentlyHovered.material = smHovered;
-
-        //label.visible = true;
-        //label.setText(currentlyHovered.image360.file);
-        //currentlyHovered.getWorldPosition(label.position);
     }
 
     update() {
@@ -266,15 +294,51 @@ export class Images360 extends EventDispatcher {
 
 export class Images360Loader {
     static async load(imageryPath, imageryDataFile, viewer, params = {}) {
-        function toAngle(x) {
-            return (x * 180) / Math.PI;
+        function drawNavigationArrow(initialPosition, finalPosition) {
+            let newInintialPosition = initialPosition.clone();
+            let newFinalPosition = finalPosition.clone();
+
+            newInintialPosition.z -= 2.5;
+            newFinalPosition.z -= 2.5;
+
+            let dir = newFinalPosition.sub(initialPosition).normalize().multiplyScalar(5);
+            let intermediatePoint = newInintialPosition.add(dir);
+
+            let radius = 0.5;
+            let h = 3.5;
+            let g = new THREE.ConeGeometry(radius, h, 50);
+            g.translate(0, h * 0.5, 0); // base to 0
+            g.rotateX(Math.PI * 0.5); // align along Z-axis
+            let m = new THREE.MeshBasicMaterial(); // or any other material
+            let o = new THREE.Mesh(g, m);
+            m.transparent = true;
+            m.opacity = 0.75;
+
+            o.position.copy(intermediatePoint);
+            o.lookAt(finalPosition);
+
+            return o;
         }
-        function toReal(x) {
-            if (!isNaN(parseFloat(x)) && isFinite(parseFloat(x))) {
-                return parseFloat(parseFloat(x).toFixed(7));
-            } else {
-                return x;
+        function drawNavigationArrows(image360) {
+            let forwardArrow = drawNavigationArrow(image360.currentPosition, image360.nextPosition);
+            let backwardArrow = drawNavigationArrow(image360.currentPosition, image360.previousPosition);
+
+            image360.forwardArrow = forwardArrow;
+            image360.backwardArrow = backwardArrow;
+        }
+        function calculateBearing(E1, N1, E2, N2) {
+            const deltaE = E2 - E1;
+            const deltaN = N2 - N1;
+
+            const bearingRad = Math.atan2(deltaE, deltaN);
+            let bearingDeg = bearingRad * (180 / Math.PI); // Convert radians to degrees
+
+            if (bearingDeg < 0) {
+                bearingDeg += 360; // Normalize the bearing to 0-360 degrees
             }
+
+            return bearingDeg;
+            // return bearingRad;
         }
 
         if (!params.transform) {
@@ -283,139 +347,80 @@ export class Images360Loader {
             };
         }
 
-        let response = await fetch(`${imageryPath}/${imageryDataFile}`);
-        let text = await response.text();
-
-        let lines = text.split(/\r?\n/);
-        let coordinateLines = lines.slice(1);
-
-        let images360 = new Images360(viewer);
         let previousLine;
         let bearing;
+        let images360 = new Images360(viewer);
+        let response = await fetch(`${imageryPath}/${imageryDataFile}`);
+        // let response = await fetch(`${url}/coordinates.txt`);
+        let text = await response.text();
 
-        for (let line of coordinateLines) {
-            if (line.trim().length === 0) {
-                continue;
-            }
+        // create an array of lines with the return character splitting them
+        let lines = text.split(/\r?\n/);
+        // remove the header
+        let coordinateLines = lines.slice(1);
 
-            let tokens = line.split(/\t/);
+        // only load 360 images for the section of lidar loaded
+        let min_x = params.metadata.boundingBox.min[0];
+        let min_y = params.metadata.boundingBox.min[1];
+        let min_z = params.metadata.boundingBox.min[2];
+        let max_x = params.metadata.boundingBox.max[0];
+        let max_y = params.metadata.boundingBox.max[1];
+        let max_z = params.metadata.boundingBox.max[2];
+        for (var i = 1; i < lines.length - 1; i++) {
+            let current = lines[i];
 
-            let [time, filename, long, lat, alt, course, pitch, roll] = tokens;
+            let tokens = current.split(/\t/);
+
+            let [filename, time, long, lat, alt, course, pitch, roll] = tokens;
             time = parseFloat(time);
             long = parseFloat(long);
             lat = parseFloat(lat);
             alt = parseFloat(alt);
-            course = parseFloat(course); // Z
-            pitch = parseFloat(pitch); // Y
-            roll = parseFloat(roll); // X
+            course = parseFloat(course);
+            pitch = parseFloat(pitch);
+            roll = parseFloat(roll);
 
-            // function calculateBearing(latA, lonA, latB, lonB) {
-            //     const toRadians = (degrees) => degrees * (Math.PI / 180);
-            //     const toDegrees = (radians) => radians * (180 / Math.PI);
+            if (long >= min_x && long <= max_x) {
+                if (lat >= min_y && lat <= max_y) {
+                    if (alt >= min_z && alt <= max_z) {
+                        // get preceeding and following lines if the lines is in extent
+                        let previous = lines[i - 1];
+                        let previousTokens = previous.split(/\t/);
+                        let [previousFilename, previousTime, previousLong, previousLat, previousAlt, previousCourse, previousPitch, previousRoll] = previousTokens;
+                        let previousBearing = calculateBearing(long, lat, previousLong, previousLat) + 180;
 
-            //     const dLat = toRadians(latB - latA);
-            //     const dLon = toRadians(lonB - lonA);
+                        let next = lines[i + 1];
+                        let nextTokens = next.split(/\t/);
+                        let [nextFilename, nextTime, nextLong, nextLat, nextAlt, nextCourse, nextPitch, nextRoll] = nextTokens;
+                        let nextBearing = calculateBearing(long, lat, nextLong, nextLat) + 180;
 
-            //     let bearing = Math.atan2(
-            //         Math.sin(dLon) * Math.cos(toRadians(latB)),
-            //         Math.cos(toRadians(latA)) * Math.sin(toRadians(latB)) - Math.sin(toRadians(latA)) * Math.cos(toRadians(latB)) * Math.cos(dLon)
-            //     );
+                        let currentPosition = new THREE.Vector3(long, lat, alt);
+                        let previousPosition = new THREE.Vector3(parseFloat(previousLong), parseFloat(previousLat), parseFloat(previousAlt));
+                        let nextPosition = new THREE.Vector3(parseFloat(nextLong), parseFloat(nextLat), parseFloat(nextAlt));
 
-            //     bearing = toDegrees(bearing);
-            //     return (bearing + 360) % 360; // Normalize the bearing to 0-360 degrees
-            // }
+                        previousPosition.previousFilename = previousFilename;
+                        nextPosition.nextFilename = nextFilename;
 
-            function calculateBearing(E1, N1, E2, N2) {
-                const deltaE = E2 - E1;
-                const deltaN = N2 - N1;
+                        filename = filename.replace(/"/g, '');
 
-                const bearingRad = Math.atan2(deltaE, deltaN);
-                let bearingDeg = bearingRad * (180 / Math.PI); // Convert radians to degrees
+                        let file = `${imageryPath}/${filename}`;
 
-                if (bearingDeg < 0) {
-                    bearingDeg += 360; // Normalize the bearing to 0-360 degrees
-                }
+                        let image360 = new Image360(file, time, long, lat, alt, nextBearing, pitch, roll);
 
-                // return bearingDeg;
-                return bearingRad;
-            }
+                        let xy = params.transform.forward([long, lat]);
+                        let position = [...xy, alt];
+                        image360.currentPosition = currentPosition;
+                        image360.previousPosition = previousPosition;
+                        image360.nextPosition = nextPosition;
 
-            if (previousLine) {
-                let prevTokens = previousLine.split(/\t/);
-                let [prevTime, prevFilename, prevLong, prevLat, prevAlt, prevCourse, prevPitch, prevRoll] = prevTokens;
+                        drawNavigationArrows(image360);
 
-                bearing = calculateBearing(prevLat, prevLong, lat, long);
-                // console.log(bearing);
-            }
-            // attempts to align the photosphere to the lidar
-            // this won't work because there is distortion that is not accounted for
-            // rot_z = numpy.atan2(math.degrees(z), math.sqrt(-math.degrees(y) - math.degrees(y) + (-math.degrees(x) - math.degrees(x))));
-            // rot_y = numpy.arctan2(math.degrees(y), math.degrees(-x));
-            // rot_x = math.degrees(x);
+                        image360.position = position;
 
-            // if (real) {
-            //     var quat = new Quaternion(roll, pitch, course, real);
-
-            //     var q = quat;
-            //     var m = new Matrix4();
-            //     m.makeRotationFromQuaternion(q);
-
-            //     var axis = [0, 0, 0];
-            //     var angle = 2 * Math.acos(q.w);
-            //     if (1 - q.w * q.w < 0.000001) {
-            //         axis[0] = q.x;
-            //         axis[1] = q.y;
-            //         axis[2] = q.z;
-            //     } else {
-            //         // http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToAngle/
-            //         var s = Math.sqrt(1 - q.w * q.w);
-            //         axis[0] = q.x / s;
-            //         axis[1] = q.y / s;
-            //         axis[2] = q.z / s;
-            //     }
-
-            //     var eu = new Euler();
-            //     eu.setFromRotationMatrix(m, 'XYZ');
-
-            //     this.roll = toReal(toAngle(eu.toArray()[0]));
-            //     this.pitch = toReal(toAngle(eu.toArray()[1]));
-            //     this.course = 360 - toReal(toAngle(eu.toArray()[2]));
-            // } else {
-            //     this.course = course;
-            //     this.pitch = pitch;
-            //     this.roll = roll;
-            // }
-
-            // only load 360 images for the section of lidar loaded
-            let min_x = params.metadata.boundingBox.min[0];
-            let min_y = params.metadata.boundingBox.min[1];
-            let min_z = params.metadata.boundingBox.min[2];
-            let max_x = params.metadata.boundingBox.max[0];
-            let max_y = params.metadata.boundingBox.max[1];
-            let max_z = params.metadata.boundingBox.max[2];
-
-            if (bearing) {
-                if (long >= min_x && long <= max_x) {
-                    if (lat >= min_y && lat <= max_y) {
-                        if (alt >= min_z && alt <= max_z) {
-                            filename = filename.replace(/"/g, '');
-
-                            let file = `${imageryPath}/${filename}`;
-
-                            let image360 = new Image360(file, time, long, lat, alt, course, pitch, roll);
-
-                            let xy = params.transform.forward([long, lat]);
-                            console.log(long, lat, alt, course);
-                            let position = [...xy, alt];
-                            image360.position = position;
-
-                            images360.images.push(image360);
-                        }
+                        images360.images.push(image360);
                     }
                 }
             }
-
-            previousLine = line;
         }
 
         Images360Loader.createSceneNodes(images360, params.transform);
@@ -430,22 +435,16 @@ export class Images360Loader {
 
             let mesh = new THREE.Mesh(sg, sm);
             mesh.position.set(...xy, altitude);
-            mesh.scale.set(1, 1, 1);
-            // mesh.material.transparent = true;
-            // mesh.material.opacity = 0.75;
+            mesh.scale.set(3, 3, 3);
+            mesh.material.transparent = true;
+            mesh.material.opacity = 0.75;
             mesh.image360 = image360;
 
-            // {
-            //     // orientation
-            //     var { course, pitch, roll } = image360;
-            //     mesh.rotation.set(THREE.Math.degToRad(+roll + 90), THREE.Math.degToRad(-pitch), THREE.Math.degToRad(-course + 90), 'ZYX');
-            //     mesh.updateMatrixWorld();
-
-            //     // mesh.rotation.setFromVector3(new THREE.Vector3(Math.PI / 2, 0, 0));
-            //     // mesh.rotateX(Math.PI / 2);
-            //     // mesh.rotation.set(THREE.Math.degToRad(roll), THREE.Math.degToRad(pitch), THREE.Math.degToRad(course), 'ZYX');
-            //     // mesh.quaternion.set(0, 0, 0, pi / 2);
-            // }
+            {
+                // orientation
+                var { course, pitch, roll } = image360;
+                mesh.rotation.set(THREE.Math.degToRad(+roll + 90), THREE.Math.degToRad(-pitch), THREE.Math.degToRad(-course + 90), 'ZYX');
+            }
 
             images360.node.add(mesh);
 
