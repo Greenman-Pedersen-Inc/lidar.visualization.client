@@ -7,6 +7,7 @@ const fsp = fs.promises;
 const concat = require('gulp-concat');
 const connect = require('gulp-connect');
 const { watch } = gulp;
+const http = require('http');
 
 const { createExamplesPage } = require('./src/tools/create_potree_page');
 const { createGithubPage } = require('./src/tools/create_github_page');
@@ -59,6 +60,10 @@ gulp.task(
         });
     })
 );
+
+gulp.task('webserver-stop', function (cb) {
+    http.request('http://127.0.0.1:1234/_kill_').on('close', cb).end();
+});
 
 gulp.task('examples_page', async function (done) {
     await Promise.all([createExamplesPage(), createGithubPage()]);

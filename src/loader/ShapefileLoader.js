@@ -93,6 +93,39 @@ export class ShapefileLoader {
             line.position.copy(min);
 
             return line;
+        } else if (geometry.type === 'LineStringZ') {
+            let coordinates = [];
+
+            let min = new THREE.Vector3(Infinity, Infinity, Infinity);
+            for (let i = 0; i < geometry.coordinates.length; i++) {
+                let [long, lat, alt] = geometry.coordinates[i];
+                let pos = transform.forward([long, lat, alt]);
+
+                min.x = Math.min(min.x, pos[0]);
+                min.y = Math.min(min.y, pos[1]);
+                min.z = Math.min(min.z, pos[2]);
+
+                coordinates.push(...pos);
+                if (i > 0 && i < geometry.coordinates.length - 1) {
+                    coordinates.push(...pos);
+                }
+            }
+
+            for (let i = 0; i < coordinates.length; i += 3) {
+                coordinates[i + 0] -= min.x;
+                coordinates[i + 1] -= min.y;
+                coordinates[i + 2] -= min.z;
+            }
+
+            const lineGeometry = new LineGeometry();
+            lineGeometry.setPositions(coordinates);
+
+            const line = new Line2(lineGeometry, matLine);
+            line.computeLineDistances();
+            line.scale.set(1, 1, 1);
+            line.position.copy(min);
+
+            return line;
         } else if (geometry.type === 'Polygon') {
             for (let pc of geometry.coordinates) {
                 let coordinates = [];

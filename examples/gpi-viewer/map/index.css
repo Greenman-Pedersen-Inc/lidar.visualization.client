@@ -14,10 +14,10 @@ input[type='text'] {
     /* position: absolute;
     right: 0;
     top: 0; */
-    background-image: url(../../resources/images/logo.png);
+    background-image: url(../../../resources/images/logo.png);
     background-size: contain;
     background-repeat: no-repeat;
-    /* background-position: right; */
+    background-position: center;
     height: 125px;
     margin-bottom: 0.5em;
     width: 100%;
@@ -29,13 +29,20 @@ input[type='text'] {
     top: 0;
     left: 0;
     z-index: 10;
-    margin: 5px;
+    margin: 14px;
     background: lightgray;
     padding: 0.5em;
     border: 1px solid black;
     border-radius: 0.5em;
     box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.25);
     width: fit-content;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 28px - 1em);
+}
+
+#route-selector {
+    overflow-y: auto;
 }
 
 #route-selector .jstree-anchor {
@@ -73,8 +80,7 @@ input[type='text'] {
 #classification-container {
     position: absolute;
     bottom: 0;
-    left: 0;
-    /* height: 50%; */
+    right: 0;
     z-index: 10;
     list-style-type: none;
     margin: 5px;
@@ -83,6 +89,18 @@ input[type='text'] {
     border: 1px solid black;
     border-radius: 0.5em;
     box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.25);
+}
+
+#classification-container li:first-of-type {
+    margin: 0.25em 0 0.25em 0;
+    padding: 0.25em;
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 2px;
+}
+
+#classification-container .invert {
+    width: 100%;
+    padding: 0.25em;
 }
 
 #map-container {
