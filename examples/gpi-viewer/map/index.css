@@ -1,5 +1,9 @@
+@import 'https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.css';
+
 body {
     font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
 }
 
 input[type='text'] {
@@ -11,16 +15,13 @@ input[type='text'] {
 }
 
 #branding {
-    /* position: absolute;
-    right: 0;
-    top: 0; */
     background-image: url(../../../resources/images/logo.png);
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    height: 125px;
-    margin-bottom: 0.5em;
-    width: 100%;
+    min-height: 125px;
+    /* margin-bottom: 0.5em; */
+    width: 250px;
     z-index: 10;
 }
 
@@ -104,11 +105,11 @@ input[type='text'] {
 }
 
 #map-container {
-    position: absolute;
+    /* position: absolute; */
     width: 100%;
-    height: 100%;
-    left: 0px;
-    top: 0px;
+    flex: 1 auto;
+    /* left: 0px;
+    top: 0px; */
 }
 
 .tool-menu {
@@ -147,4 +148,28 @@ input[type='text'] {
 
 .functionality-button i:hover {
     color: green;
+}
+
+.esri-legend__service {
+    display: flex;
+    align-items: center;
+}
+.esri-legend__layer-table {
+    margin-bottom: 0;
+}
+.esri-widget__heading {
+    margin-bottom: 0;
+}
+.esri-legend__layer-cell {
+    min-width: 0;
+}
+.esri-ui-corner .esri-component.esri-widget--panel {
+    width: auto;
+}
+.feature-tab-container {
+    height: auto;
+    width: 100%;
+}
+.esri-feature-table {
+    height: 250px;
 }

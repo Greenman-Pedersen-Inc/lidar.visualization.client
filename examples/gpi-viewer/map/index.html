@@ -5,7 +5,7 @@
         <meta name="description" content="" />
         <meta name="author" content="" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-        <title>GPIILE: NJDOT</title>
+        <title>NJDOT GAMS: Viewer</title>
 
         <link rel="stylesheet" type="text/css" href="../../../build/potree/potree.css" />
         <link rel="stylesheet" type="text/css" href="../../../libs/jquery-ui/jquery-ui.min.css" />
@@ -22,10 +22,24 @@
     <body>
         <div id="route-selector-container">
             <div id="branding"></div>
-            <input type="text" placeholder="Filter by state route identifier..." />
-            <div id="route-selector"></div>
+            <div class="hidden">
+                <input type="text" placeholder="Filter by state route identifier..." />
+                <div id="route-selector"></div>
+            </div>
         </div>
         <div id="map-container"></div>
+        <div class="feature-tab-container">
+            <calcite-tabs>
+                <calcite-tab-nav slot="title-group">
+                    <calcite-tab-title selected>Rock Slope</calcite-tab-title>
+                    <calcite-tab-title>Retaining Wall</calcite-tab-title>
+                    <calcite-tab-title>Cross Section</calcite-tab-title>
+                </calcite-tab-nav>
+                <calcite-tab><div id="rock-slope-feature-table-container"></div></calcite-tab>
+                <calcite-tab><div id="retaining-wall-feature-table-container"></div></calcite-tab>
+                <calcite-tab selected><div id="cross-section-feature-table-container"></div></calcite-tab>
+            </calcite-tabs>
+        </div>
         <div id="panel-container"></div>
         <div id="potree-container" class="hidden">
             <div id="close-lidar-viewer-button">
@@ -63,6 +77,16 @@
 
         <script src="https://js.arcgis.com/4.31/"></script>
         <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
+
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three/build/three.module.js",
+                    "@photo-sphere-viewer/core": "https://cdn.jsdelivr.net/npm/@photo-sphere-viewer/core@5/index.module.js"
+                }
+            }
+        </script>
+
         <script type="module" src="index.js"></script>
     </body>
 </html>

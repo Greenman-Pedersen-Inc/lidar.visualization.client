@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Login</title>
+        <title>NJDOT GAMS: Login</title>
         <style>
             body {
                 margin: 0;
@@ -48,37 +48,110 @@
             .login-container button:hover {
                 background-color: #0056b3;
             }
+
+            .banner-container {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                margin-bottom: 20px;
+            }
+            .error-message {
+                margin: -10px 0 12px 4px;
+
+                color: red;
+                font-size: 0.75em;
+                font-weight: bold;
+            }
+
+            .hidden {
+                display: none;
+            }
+
+            .input-alignment {
+                display: flex;
+                flex-direction: column;
+                text-align: left;
+            }
+
+            @keyframes horizontal-shaking {
+                0% {
+                    transform: translateX(0);
+                }
+                25% {
+                    transform: translateX(5px);
+                }
+                50% {
+                    transform: translateX(-5px);
+                }
+                75% {
+                    transform: translateX(5px);
+                }
+                100% {
+                    transform: translateX(0);
+                }
+            }
+
+            button.error {
+                animation: horizontal-shaking 0.35s 1;
+                border: 2px solid red;
+                background-color: red;
+            }
+
+            button.error:hover {
+                background-color: red;
+            }
         </style>
     </head>
     <body>
         <div class="login-container">
-            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px">
+            <div class="banner-container">
                 <img style="height: 80px" src="NJDOT-Seal.png" />
                 <span><h1>GAMS Login</h1></span>
             </div>
-            <div>
-                <input id="username" type="text" placeholder="Username" required />
-                <input id="password" type="password" placeholder="Password" required />
-                <button type="submit">Login</button>
+            <div class="input-alignment">
+                <input id="username" type="text" placeholder="Username" />
+                <div class="error-message hidden">verify username</div>
+
+                <input id="password" type="password" placeholder="Password" />
+                <div class="error-message hidden">verify password</div>
+
+                <button id="submit" type="submit">Login</button>
             </div>
         </div>
 
         <script>
             const CRED = 'cred_location_storage';
             document.querySelector('button').addEventListener('click', () => {
-                const baseURL = 'http://127.0.0.1:65000/v1/';
-                // const baseURL = 'https://gpi-inspections.com/gpi-viewer/data/v1/';
-                const username = document.querySelector('#username').value;
-                const password = document.querySelector('#password').value;
+                // const baseURL = 'http://127.0.0.1:65000/v1/';
+                const baseURL = 'https://maps.gpinet.com/gpi-viewer/data/v1/';
+                const username = document.querySelector('#username');
+                const password = document.querySelector('#password');
 
                 fetch(baseURL + 'authenticate', {
                     method: 'POST', // or POST, PUT, DELETE, etc.
-                    body: JSON.stringify({ username: username, password: password }),
+                    body: JSON.stringify({ username: username.value, password: password.value }),
                 })
-                    .then((response) => response.json())
+                    .then((response) => {
+                        console.log(response);
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            throw 'Login failed. Please check your credentials.';
+                        }
+                    })
                     .then((credentials) => {
                         window.localStorage.setItem(CRED, JSON.stringify(credentials));
                         window.location.href = '../map';
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+
+                        const submitButton = document.querySelector('#submit');
+                        const errorMessages = document.querySelectorAll('.error-message');
+                        errorMessages.forEach((message) => {
+                            message.classList.remove('hidden');
+                        });
+                        submitButton.classList.add('error');
                     });
             });
         </script>

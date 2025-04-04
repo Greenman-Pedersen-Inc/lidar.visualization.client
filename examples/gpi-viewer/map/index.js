@@ -1,4 +1,7 @@
 import * as THREE from '../../../libs/three.js/build/three.module.js';
+
+import { Viewer } from '@photo-sphere-viewer/core';
+
 require([
     'esri/layers/FeatureLayer',
     'esri/layers/GeoJSONLayer',
@@ -6,46 +9,56 @@ require([
     'esri/views/MapView',
     'esri/core/reactiveUtils',
     'esri/widgets/Compass',
+    'esri/widgets/Legend',
     'esri/widgets/ScaleBar',
     'esri/layers/support/Field',
-], (FeatureLayer, GeoJSONLayer, Map, MapView, reactiveUtils, Compass, ScaleBar, Field) => {
+    'esri/widgets/FeatureTable',
+], (FeatureLayer, GeoJSONLayer, Map, MapView, reactiveUtils, Compass, Legend, ScaleBar, Field, FeatureTable) => {
     let animation;
     let classificationSelector;
     // const baseURL = 'http://127.0.0.1:65000/v1/';
-    const baseURL = 'https://gpi-inspections.com/gpi-viewer/data/v1/';
+    const baseURL = 'https://maps.gpinet.com/gpi-viewer/data/v1/';
     const playButton = document.getElementById('play-button');
     const pauseButton = document.getElementById('pause-button');
     const closeLidarViewerButton = document.getElementById('close-lidar-viewer-button');
     function loadMenu(credentials) {
-        return fetch(baseURL + 'run_list', {
-            method: 'GET', // or POST, PUT, DELETE, etc.
-            cache: 'no-store',
-            headers: {
-                token: credentials.token,
-            },
-        })
-            .then((response) => {
-                if (response.status === 401) {
-                    window.location = '../login';
-                }
-
-                return response.json();
+        if (credentials && credentials.token) {
+            return fetch(baseURL + 'run_list', {
+                method: 'GET', // or POST, PUT, DELETE, etc.
+                cache: 'no-store',
+                headers: {
+                    token: credentials.token,
+                },
             })
-            .then((data) => {
-                $('#route-selector').jstree({
-                    core: {
-                        data: data.tree.children,
-                    },
-                    plugins: ['search'],
-                });
-                $('#route-selector').on('select_node.jstree', function (e, data) {
-                    if (data.node.original.path) {
-                        loadRoute(data.node.original.path);
+                .then((response) => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        if (response.status === 401) {
+                            window.location = '../login';
+                        } else {
+                            throw 'Failed to fetch data from the server. Please try refreshing the page.';
+                        }
                     }
-                });
+                })
+                .then((data) => {
+                    $('#route-selector').jstree({
+                        core: {
+                            data: data.tree.children,
+                        },
+                        plugins: ['search'],
+                    });
+                    $('#route-selector').on('select_node.jstree', function (e, data) {
+                        if (data.node.original.path) {
+                            loadRoute(data.node.original.path);
+                        }
+                    });
 
-                return data.flatList;
-            });
+                    return data.flatList;
+                });
+        } else {
+            window.location = '../login';
+        }
     }
     // this function is for adding 3D polygons
     function createMeshFeatures(features) {
@@ -1264,8 +1277,9 @@ require([
     const view = new MapView({
         container: 'map-container', // reference to the div id
         map: map,
-        zoom: 8,
-        center: [-74.4057, 40.0583],
+        zoom: 16,
+        // center: [-74.4057, 40.0583],
+        center: [-74.75939269860886, 40.20282385900586],
     });
     let compass = new Compass({
         view: view,
@@ -1299,9 +1313,14 @@ require([
         potreeContainer.classList.add('hidden');
     });
 
-    view.ui.move(['zoom'], 'bottom-right');
-    view.ui.add(compass, 'bottom-right');
-    view.ui.add(scaleBar, 'bottom-left');
+    view.ui.add(scaleBar, 'bottom-right');
+
+    view.ui.move(['zoom'], 'top-right');
+
+    view.popup.dockOptions = {
+        buttonEnabled: true,
+        position: 'bottom-left',
+    };
 
     view.when(() => {
         const retainingWallFeatureLayer = new FeatureLayer({
@@ -1332,6 +1351,11 @@ require([
                             { fieldName: 'Notes', label: 'Notes' },
                             { fieldName: 'Shape__Length', label: 'Shape__Length' },
                         ],
+                    },
+                    {
+                        // if attachments are associated with feature, display it.
+                        // Autocasts as new AttachmentsContent()
+                        type: 'attachments',
                     },
                 ],
             },
@@ -1390,6 +1414,11 @@ require([
                             { fieldName: 'Notes', label: 'Notes' },
                         ],
                     },
+                    {
+                        // if attachments are associated with feature, display it.
+                        // Autocasts as new AttachmentsContent()
+                        type: 'attachments',
+                    },
                 ],
             },
             fields: [
@@ -1444,8 +1473,8 @@ require([
                     color: [0, 0, 0, 0.25],
                     outline: {
                         // autocasts as new SimpleLineSymbol()
-                        width: 1,
-                        color: 'navy',
+                        width: 0,
+                        color: [0, 0, 0, 0.25],
                     },
                 },
             },
@@ -1489,16 +1518,74 @@ require([
                 actions: [
                     {
                         // This text is displayed as a tooltip
-                        title: 'Open Route',
+                        title: 'Open Lidar',
                         // The ID by which to reference the action in the event handler
-                        id: 'open-route',
+                        id: 'open-lidar',
                         // Sets the icon font used to style the action button
                         icon: 'surface',
                     },
                 ],
             },
-            definitionExpression: "NAME not like '00000080_EB%' and NAME not like '00000287_SB%' and NAME not like '00000295_SB%'",
+            // definitionExpression: "NAME not like '00000080_EB%' and NAME not like '00000287_SB%' and NAME not like '00000295_SB%'",
         });
+        const imageryLocationFeatureLayer = new FeatureLayer({
+            url: 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/5',
+            minScale: 2200,
+            renderer: {
+                type: 'simple',
+                symbol: {
+                    type: 'simple-marker',
+                    style: 'circle',
+                    color: [230, 0, 0, 255],
+                    size: 4,
+                },
+            },
+            fields: [
+                { name: 'Filename', alias: 'Filename', type: 'string' },
+                { name: 'Origin__Easting_ftUS_', alias: 'Origin (Easting(ftUS)', type: 'string' },
+                { name: 'Northing_ftUS_', alias: 'Northing(ftUS)', type: 'string' },
+                { name: 'SRI', alias: 'SRI', type: 'string' },
+                { name: 'Direction', alias: 'Direction', type: 'string' },
+                { name: 'Lidar_Segment_Name', alias: 'Lidar Segment Name', type: 'string' },
+            ],
+            popupTemplate: {
+                title: '360 Imagery Point: {Lidar_Segment_Name}',
+                content: (feature) => {
+                    console.log(view);
+
+                    const imageryWindow = window.open(
+                        'http://localhost:1234/examples/gpi-viewer/simple.photo.sphere/',
+                        feature.graphic.attributes.Lidar_Segment_Name,
+                        'width=750,height=750,popup=true,top=0,left=' + screen.availWidth
+                    );
+
+                    imageryWindow.document.title = feature.graphic.attributes.Lidar_Segment_Name;
+
+                    // const handle = reactiveUtils.watch(
+                    //     () => view.popup.visible,
+                    //     (isVisible) => {
+                    //         if (!isVisible) {
+                    //             if (imageryWindow) {
+                    //                 imageryWindow.close();
+                    //                 handle.remove();
+                    //             }
+                    //         }
+                    //     }
+                    // );
+                },
+                actions: [
+                    {
+                        // This text is displayed as a tooltip
+                        title: 'Open Lidar',
+                        // The ID by which to reference the action in the event handler
+                        id: 'open-lidar',
+                        // Sets the icon font used to style the action button
+                        icon: 'surface',
+                    },
+                ],
+            },
+        });
+
         const stateOutline = new GeoJSONLayer({
             url: 'https://services2.arcgis.com/XVOqAjTOJ5P6ngMu/arcgis/rest/services/NJ_State_Boundary/FeatureServer/3/query?outFields=*&where=1%3D1&f=geojson',
             renderer: {
@@ -1513,39 +1600,82 @@ require([
                 },
             },
         });
+        let legend = new Legend({
+            view: view,
+            layerInfos: [
+                { layer: retainingWallFeatureLayer, title: 'Retaining Wall' },
+                { layer: rockSlopeFeatureLayer, title: 'Rock Slope' },
+                { layer: crossSectionFeatureLayer, title: 'Cross Section' },
+                // { layer: runCoverageFeatureLayer, title: 'Run Coverage' },
+                { layer: imageryLocationFeatureLayer, title: '360 Imagery' },
+            ],
+        });
+        view.ui.add(legend, 'bottom-right');
 
-        loadMenu(credentials).then((flatLidarList) => {
-            // flatLidarList
-            //     .filter((path) => path.indexOf('80_EB') >= 0)
-            //     .forEach((path, index) => {
-            //         console.log(path);
-            //         loadRouteTest(path, index === 0);
-            //     });
-            reactiveUtils.on(
-                () => view.popup,
-                'trigger-action',
-                (event) => {
-                    if (event.action.id === 'open-route') {
-                        const attributes = view.popup.selectedFeature.attributes;
+        loadMenu(credentials)
+            .then((flatLidarList) => {
+                // flatLidarList
+                //     .filter((path) => path.indexOf('80_EB') >= 0)
+                //     .forEach((path, index) => {
+                //         console.log(path);
+                //         loadRouteTest(path, index === 0);
+                //     });
+                reactiveUtils.on(
+                    () => view.popup,
+                    'trigger-action',
+                    (event) => {
+                        if (event.action.id === 'open-lidar') {
+                            const lidarSegmentName = view.popup.selectedFeature.attributes.Lidar_Segment_Name;
+                            const routeName = lidarSegmentName.split('_')[0];
+                            const routeDirection = lidarSegmentName.split('_')[1];
+                            const routeSegment = lidarSegmentName.split('_')[2];
 
-                        const path = flatLidarList.filter((element) => element.indexOf(attributes.NAME) >= 0);
+                            const path = flatLidarList.filter((element) => element.indexOf(routeName) >= 0 && element.indexOf(routeDirection) >= 0 && element.indexOf(routeSegment) >= 0);
 
-                        if (path.length === 1) {
-                            loadRoute(path[0], attributes.NAME);
+                            if (path.length === 1) {
+                                loadRoute(path[0], lidarSegmentName);
+                            }
                         }
                     }
-                }
-            );
-        });
+                );
+            })
+            .catch((error) => {
+                console.log(error);
+            });
 
         map.add(stateOutline); // adds the layer to the map
-        map.add(runCoverageFeatureLayer); // adds the layer to the map
+        // map.add(runCoverageFeatureLayer); // adds the layer to the map
         map.add(retainingWallFeatureLayer); // adds the layer to the map
         map.add(rockSlopeFeatureLayer); // adds the layer to the map
         map.add(crossSectionFeatureLayer); // adds the layer to the map
+        map.add(imageryLocationFeatureLayer); // adds the layer to the map
+
+        let crossSectionFeatureTable = new FeatureTable({
+            view: view,
+            layer: crossSectionFeatureLayer,
+            container: 'cross-section-feature-table-container',
+        });
+        featureTable.visibleElements.selectionColumn = false;
+        featureTable.on('cell-click', (event) => {
+            if (featureTable.highlightIds.includes(event.objectId)) {
+                featureTable.highlightIds.remove(event.objectId);
+            } else {
+                featureTable.highlightIds.push(event.objectId);
+            }
+        });
+
+        new FeatureTable({
+            view: view,
+            layer: rockSlopeFeatureLayer,
+            container: 'rock-slope-feature-table-container',
+        });
+        new FeatureTable({
+            view: view,
+            layer: retainingWallFeatureLayer,
+            container: 'retaining-wall-feature-table-container',
+        });
 
         new AssetFilter(view, 'Retaining Wall', retainingWallFeatureLayer);
         new AssetFilter(view, 'Rock Slope', rockSlopeFeatureLayer);
-        new AssetFilter(view, 'Cross Section', crossSectionFeatureLayer);
     });
 });
