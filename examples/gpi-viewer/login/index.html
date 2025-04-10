@@ -6,12 +6,13 @@
         <title>NJDOT GAMS: Login</title>
         <style>
             body {
-                margin: 0;
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 height: 100vh;
-                background-image: url(background.png);
+                background-image: url(background.jpg);
+                background-repeat: no-repeat;
+                background-size: cover;
                 background-color: #f0f2f5;
                 font-family: Arial, sans-serif;
             }
@@ -100,6 +101,39 @@
             button.error:hover {
                 background-color: red;
             }
+
+            .loading-btn {
+                position: relative;
+                /* padding-left: 40px; */
+                /* display: flex; */
+                /* align-items: center; */
+                /* flex-direction: row-reverse; */
+            }
+
+            .spinner {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                width: 20px;
+                height: 20px;
+                margin-top: -12px;
+                border: 2px solid #f3f3f3;
+                border-top: 2px solid #3498db;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            .button-text {
+                flex: 1 auto;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
         </style>
     </head>
     <body>
@@ -115,7 +149,12 @@
                 <input id="password" type="password" placeholder="Password" />
                 <div class="error-message hidden">verify password</div>
 
-                <button id="submit" type="submit">Login</button>
+                <button id="submit" type="submit" class="loading-btn">
+                    <span class="spinner hidden"></span>
+                    <span class="button-text">Login</span>
+                </button>
+
+                <!-- <button id="submit" type="submit">Login</button> -->
             </div>
         </div>
 
@@ -126,16 +165,19 @@
                 const baseURL = 'https://maps.gpinet.com/gpi-viewer/data/v1/';
                 const username = document.querySelector('#username');
                 const password = document.querySelector('#password');
+                const spinner = document.querySelector('.spinner');
+
+                spinner.classList.remove('hidden');
 
                 fetch(baseURL + 'authenticate', {
                     method: 'POST', // or POST, PUT, DELETE, etc.
                     body: JSON.stringify({ username: username.value, password: password.value }),
                 })
                     .then((response) => {
-                        console.log(response);
                         if (response.ok) {
                             return response.json();
                         } else {
+                            spinner.classList.add('hidden');
                             throw 'Login failed. Please check your credentials.';
                         }
                     })
@@ -144,8 +186,6 @@
                         window.location.href = '../map';
                     })
                     .catch((error) => {
-                        console.error('Error:', error);
-
                         const submitButton = document.querySelector('#submit');
                         const errorMessages = document.querySelectorAll('.error-message');
                         errorMessages.forEach((message) => {

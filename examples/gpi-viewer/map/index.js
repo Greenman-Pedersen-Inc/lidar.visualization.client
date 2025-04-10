@@ -1,6 +1,5 @@
-import * as THREE from '../../../libs/three.js/build/three.module.js';
-
-import { Viewer } from '@photo-sphere-viewer/core';
+import * as THREE from '../libs/three.js/build/three.module.js';
+// import * as THREE from '../../../libs/three.js/build/three.module.js';
 
 require([
     'esri/layers/FeatureLayer',
@@ -11,16 +10,45 @@ require([
     'esri/widgets/Compass',
     'esri/widgets/Legend',
     'esri/widgets/ScaleBar',
+    'esri/widgets/BasemapToggle',
     'esri/layers/support/Field',
     'esri/widgets/FeatureTable',
-], (FeatureLayer, GeoJSONLayer, Map, MapView, reactiveUtils, Compass, Legend, ScaleBar, Field, FeatureTable) => {
+    'esri/geometry/projection',
+    'esri/geometry/SpatialReference',
+], (FeatureLayer, GeoJSONLayer, Map, MapView, reactiveUtils, Compass, Legend, ScaleBar, BasemapToggle, Field, FeatureTable, projection, SpatialReference) => {
     let animation;
     let classificationSelector;
     // const baseURL = 'http://127.0.0.1:65000/v1/';
     const baseURL = 'https://maps.gpinet.com/gpi-viewer/data/v1/';
-    const playButton = document.getElementById('play-button');
-    const pauseButton = document.getElementById('pause-button');
+    const featureServerURL = 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/';
+    // const playButton = document.getElementById('play-button');
+    // const pauseButton = document.getElementById('pause-button');
     const closeLidarViewerButton = document.getElementById('close-lidar-viewer-button');
+    const CRED = 'cred_location_storage';
+    const credentials = JSON.parse(window.localStorage.getItem(CRED));
+
+    const map = new Map({
+        basemap: 'topo-vector',
+    });
+    const view = new MapView({
+        container: 'map-container', // reference to the div id
+        map: map,
+        zoom: 8,
+        center: [-74.4057, 40.0583],
+        // center: [-74.75939269860886, 40.20282385900586],
+    });
+    const scaleBar = new ScaleBar({
+        view: view,
+        unit: 'imperial',
+    });
+    const basemapToggle = new BasemapToggle({
+        view: view, // The view that provides access to the map's "streets-vector" basemap
+        nextBasemap: 'hybrid', // Allows for toggling to the "hybrid" basemap
+    });
+    const legend = new Legend({
+        view: view,
+    });
+
     function loadMenu(credentials) {
         if (credentials && credentials.token) {
             return fetch(baseURL + 'run_list', {
@@ -123,7 +151,7 @@ require([
             console.log(error);
         }
     }
-    async function loadRoute(folderPath, roadSegment = '') {
+    async function loadRoute(folderPath, roadSegment = '', coordinates) {
         try {
             const metadataPath = `${folderPath}/metadata.json`;
 
@@ -136,11 +164,17 @@ require([
             const route = metadata.name.split('_')[0];
             const mapContainer = document.getElementById('map-container');
             const potreeContainer = document.getElementById('potree-container');
+            const featureTabContainer = document.querySelector('.feature-tab-container');
 
+            featureTabContainer.classList.add('hidden');
             mapContainer.classList.add('hidden');
             potreeContainer.classList.remove('hidden');
             // always position the camera when loading a route (whether previously loaded or not)
-            positionCamera(metadata);
+            if (coordinates) {
+                positionCamera(metadata, coordinates);
+            } else {
+                positionCamera(metadata);
+            }
 
             if (viewer.scene.pointclouds.map((pointCloud) => pointCloud.name).indexOf(metadata.name) < 0) {
                 Potree.loadPointCloud(metadataPath, metadata.name, async (e) => {
@@ -168,11 +202,20 @@ require([
         }
         // Load and add point cloud to scene
     }
-    function positionCamera(metadata) {
-        let centroidX = metadata.boundingBox.min[0] + (metadata.boundingBox.max[0] - metadata.boundingBox.min[0]) / 2;
-        let centroidY = metadata.boundingBox.min[1] + (metadata.boundingBox.max[1] - metadata.boundingBox.min[1]) / 2;
+    function positionCamera(metadata, coordinates) {
+        let centroidX, centroidY, centroidZ;
 
-        viewer.scene.view.position.set(centroidX, centroidY, metadata.boundingBox.max[2]);
+        if (coordinates) {
+            centroidX = coordinates.x;
+            centroidY = coordinates.y;
+            centroidZ = coordinates.z;
+        } else {
+            centroidX = metadata.boundingBox.min[0] + (metadata.boundingBox.max[0] - metadata.boundingBox.min[0]) / 2;
+            centroidY = metadata.boundingBox.min[1] + (metadata.boundingBox.max[1] - metadata.boundingBox.min[1]) / 2;
+            centroidZ = coordinates.z;
+        }
+
+        viewer.scene.view.position.set(centroidX, centroidY, centroidZ);
         viewer.scene.view.lookAt(new THREE.Vector3(centroidX, centroidY, metadata.boundingBox.min[2]));
 
         return metadata;
@@ -197,14 +240,15 @@ require([
         const self = this;
 
         this.measuringTool = viewer.measuringTool;
-        this.createToolIcon = (icon, title, callback, id) => {
+        this.createToolIcon = (icon, title, tooltip, callback, id) => {
             let element = $(`
-        <img ${id ? `id = "${id}"` : ''} 
-            src="${icon}"
-            style="width: 32px; height: 32px"
-            class="button-icon"
-            data-i18n="${title}" />
-    `);
+                <img ${id ? `id = "${id}"` : ''} 
+                    src="${icon}"
+                    style="width: 32px; height: 32px"
+                    class="button-icon"
+                    title="${tooltip}"
+                    data-i18n="${title}" />
+            `);
 
             element.click(callback);
 
@@ -214,7 +258,7 @@ require([
         // ANGLE
         let elToolbar = $(attachPoint);
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/angle.png', '[title]tt.angle_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/angle.png', '[title]tt.angle_measurement', 'Angle Measurement', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: false,
@@ -234,7 +278,7 @@ require([
 
         // POINT
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/point.svg', '[title]tt.point_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/point.svg', '[title]tt.point_measurement', 'Point Measurement', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: false,
@@ -255,7 +299,7 @@ require([
 
         // DISTANCE
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/distance.svg', '[title]tt.distance_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/distance.svg', '[title]tt.distance_measurement', 'Distance Measurement', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: true,
@@ -273,7 +317,7 @@ require([
 
         // HEIGHT
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/height.svg', '[title]tt.height_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/height.svg', '[title]tt.height_measurement', 'Height Measurement', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: false,
@@ -293,7 +337,7 @@ require([
 
         // CIRCLE
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/circle.svg', '[title]tt.circle_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/circle.svg', '[title]tt.circle_measurement', 'Circle Measurement', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: false,
@@ -315,7 +359,7 @@ require([
 
         // AZIMUTH
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/azimuth.svg', 'Azimuth', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/azimuth.svg', 'Azimuth', 'Azimuth', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: false,
@@ -338,7 +382,7 @@ require([
 
         // AREA
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/area.svg', '[title]tt.area_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/area.svg', '[title]tt.area_measurement', 'Area Measurement', () => {
                 $('#menu_measurements').next().slideDown();
                 let measurement = this.measuringTool.startInsertion({
                     showDistances: true,
@@ -382,7 +426,7 @@ require([
 
         // PROFILE
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/profile.svg', '[title]tt.height_profile', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/profile.svg', '[title]tt.height_profile', 'Height Profile', () => {
                 $('#menu_measurements').next().slideDown();
                 let profile = viewer.profileTool.startInsertion();
 
@@ -395,7 +439,7 @@ require([
 
         // View Profile
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/eye.svg', '[title]tt.view_selected_profile', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/eye.svg', '[title]tt.view_selected_profile', 'View Selected Profile', () => {
                 let show2DProfileIcon = document.getElementById('show_2d_profile');
                 show2DProfileIcon.click();
             })
@@ -416,7 +460,7 @@ require([
 
         // REMOVE ALL
         elToolbar.append(
-            this.createToolIcon(Potree.resourcePath + '/icons/reset_tools.svg', '[title]tt.remove_all_measurement', () => {
+            this.createToolIcon(Potree.resourcePath + '/icons/reset_tools.svg', '[title]tt.remove_all_measurement', 'Remove All Measurements', () => {
                 viewer.scene.removeAllMeasurements();
             })
         );
@@ -636,7 +680,6 @@ require([
             this.domNode.className = 'attribute-row';
             this.domNode.append(fieldSelector.domNode, operatorSelector.domNode, assetValueSelector.domNode, rowClear);
         }
-
         function FieldSelector(parent, options, fieldSelected) {
             const self = this;
 
@@ -730,7 +773,6 @@ require([
 
             if (options) this.populate(options, fieldSelected);
         }
-
         function OperatorSelector(parent, fieldSelected, operatorSelected) {
             const self = this;
 
@@ -817,7 +859,6 @@ require([
                 self.populate(fieldSelected, operatorSelected);
             }
         }
-
         function FieldValueSelector(parent, fieldSelected, valueSelected) {
             const self = this;
             this.domNode = document.createElement('div');
@@ -1003,10 +1044,7 @@ require([
             }
         };
         this.clear = function () {
-            console.log(extentData);
-
             self.queryEditor.innerHTML = '';
-
             self.filterRows.forEach((filterRow) => {
                 self.removeFilterRow(filterRow, true);
             });
@@ -1177,29 +1215,31 @@ require([
             );
         });
 
-        defaultValues.forEach((value) => {
-            self.addFilterRow(featureLayer, value.field, value.operator, value.value);
+        featureLayer.when(() => {
+            defaultValues.forEach((value) => {
+                self.addFilterRow(featureLayer, value.field, value.operator, value.value);
+            });
+
+            self.addFilterRow(featureLayer);
+            self.createQueryString();
+            // self.apply();
+
+            if (index >= 0) {
+                view.ui.add(filterButton, {
+                    position: 'top-right',
+                    index: index,
+                });
+                view.ui.add(filterBoxes, {
+                    position: 'top-right',
+                });
+            } else {
+                view.ui.add(filterButton, {
+                    position: 'top-right',
+                });
+            }
+
+            document.body.append(this.domNode);
         });
-
-        self.addFilterRow(featureLayer);
-        self.createQueryString();
-        // self.apply();
-
-        if (index >= 0) {
-            view.ui.add(filterButton, {
-                position: 'top-right',
-                index: index,
-            });
-            view.ui.add(filterBoxes, {
-                position: 'top-right',
-            });
-        } else {
-            view.ui.add(filterButton, {
-                position: 'top-right',
-            });
-        }
-
-        document.body.append(this.domNode);
     }
     function loadRouteTest(folderInfo, firstSegment = false) {
         try {
@@ -1260,8 +1300,6 @@ require([
     //     viewer.setPointBudget(10_000_000);
     //     animation.pause();
     // });
-    const CRED = 'cred_location_storage';
-    let credentials = JSON.parse(window.localStorage.getItem(CRED));
 
     // fetch(baseURL + 'authenticate', {
     //     method: 'POST', // or POST, PUT, DELETE, etc.
@@ -1270,24 +1308,6 @@ require([
     //     .then((response) => response.json())
     //     .then((credentials) => {
     //     });
-
-    const map = new Map({
-        basemap: 'topo-vector',
-    });
-    const view = new MapView({
-        container: 'map-container', // reference to the div id
-        map: map,
-        zoom: 16,
-        // center: [-74.4057, 40.0583],
-        center: [-74.75939269860886, 40.20282385900586],
-    });
-    let compass = new Compass({
-        view: view,
-    });
-    let scaleBar = new ScaleBar({
-        view: view,
-        unit: 'imperial',
-    });
 
     window.viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
     viewer.setEDLEnabled(true);
@@ -1308,23 +1328,16 @@ require([
     closeLidarViewerButton.addEventListener('click', (event) => {
         const mapContainer = document.getElementById('map-container');
         const potreeContainer = document.getElementById('potree-container');
+        const featureTabContainer = document.querySelector('.feature-tab-container');
 
+        featureTabContainer.classList.remove('hidden');
         mapContainer.classList.remove('hidden');
         potreeContainer.classList.add('hidden');
     });
 
-    view.ui.add(scaleBar, 'bottom-right');
-
-    view.ui.move(['zoom'], 'top-right');
-
-    view.popup.dockOptions = {
-        buttonEnabled: true,
-        position: 'bottom-left',
-    };
-
     view.when(() => {
         const retainingWallFeatureLayer = new FeatureLayer({
-            url: 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/0',
+            url: featureServerURL + '0',
             popupTemplate: {
                 title: 'Retaining Wall: {SRI} [{MP_Start} - {MP_End}]',
                 outFields: ['*'],
@@ -1358,6 +1371,16 @@ require([
                         type: 'attachments',
                     },
                 ],
+                actions: [
+                    {
+                        // This text is displayed as a tooltip
+                        title: 'Open Lidar',
+                        // The ID by which to reference the action in the event handler
+                        id: 'open-lidar',
+                        // Sets the icon font used to style the action button
+                        icon: 'surface',
+                    },
+                ],
             },
             fields: [
                 new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
@@ -1381,9 +1404,10 @@ require([
             ],
         });
         const rockSlopeFeatureLayer = new FeatureLayer({
-            url: 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/1',
+            url: featureServerURL + '1',
             popupTemplate: {
-                title: 'Rock Slope: {SRI} [{MP_Start} - {MP_End}]',
+                title: `Rock & Soil Slope: {SRI}
+                 [{MP_Start} - {MP_End}]`,
                 outFields: ['*'],
                 content: [
                     {
@@ -1420,6 +1444,16 @@ require([
                         type: 'attachments',
                     },
                 ],
+                actions: [
+                    {
+                        // This text is displayed as a tooltip
+                        title: 'Open Lidar',
+                        // The ID by which to reference the action in the event handler
+                        id: 'open-lidar',
+                        // Sets the icon font used to style the action button
+                        icon: 'surface',
+                    },
+                ],
             },
             fields: [
                 new Field({ name: 'MP_Start', alias: 'MP_Start', type: 'double' }),
@@ -1448,7 +1482,7 @@ require([
             ],
         });
         const crossSectionFeatureLayer = new FeatureLayer({
-            url: 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/2',
+            url: featureServerURL + '2',
             popupTemplate: {
                 title: 'Cross Section: {SRI} [{MP_Start} - {MP_End}]',
                 outFields: ['*'],
@@ -1460,21 +1494,37 @@ require([
                             { fieldName: 'Shape__Length', label: 'Shape__Length' },
                         ],
                     },
+                    {
+                        // if attachments are associated with feature, display it.
+                        // Autocasts as new AttachmentsContent()
+                        type: 'attachments',
+                    },
+                ],
+                actions: [
+                    {
+                        // This text is displayed as a tooltip
+                        title: 'Open Lidar',
+                        // The ID by which to reference the action in the event handler
+                        id: 'open-lidar',
+                        // Sets the icon font used to style the action button
+                        icon: 'surface',
+                    },
                 ],
             },
             fields: [new Field({ name: 'SRI', alias: 'SRI', type: 'string' }), new Field({ name: 'Shape__Length', alias: 'Shape__Length', type: 'double' })],
         });
         const runCoverageFeatureLayer = new FeatureLayer({
-            url: 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/3',
+            url: featureServerURL + '3',
+            maxScale: 9000,
             renderer: {
-                type: 'simple', // autocasts as new SimpleRenderer()
+                type: 'simple',
                 symbol: {
-                    type: 'simple-fill', // autocasts as new SimpleFillSymbol()
-                    color: [0, 0, 0, 0.25],
+                    type: 'simple-fill',
+                    color: [218, 0, 0],
+                    opacity: 1,
                     outline: {
-                        // autocasts as new SimpleLineSymbol()
-                        width: 0,
-                        color: [0, 0, 0, 0.25],
+                        width: 2,
+                        color: [218, 0, 0],
                     },
                 },
             },
@@ -1512,9 +1562,6 @@ require([
             ],
             popupTemplate: {
                 title: 'Route Segment {NAME}',
-                content: (feature) => {
-                    console.log(feature);
-                },
                 actions: [
                     {
                         // This text is displayed as a tooltip
@@ -1529,8 +1576,8 @@ require([
             // definitionExpression: "NAME not like '00000080_EB%' and NAME not like '00000287_SB%' and NAME not like '00000295_SB%'",
         });
         const imageryLocationFeatureLayer = new FeatureLayer({
-            url: 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/5',
-            minScale: 2200,
+            url: featureServerURL + '5',
+            minScale: 9000,
             renderer: {
                 type: 'simple',
                 symbol: {
@@ -1550,29 +1597,33 @@ require([
             ],
             popupTemplate: {
                 title: '360 Imagery Point: {Lidar_Segment_Name}',
-                content: (feature) => {
-                    console.log(view);
+                content: [
+                    {
+                        type: 'custom', // Autocasts as new FieldsContent()
+                        outFields: ['*'],
+                        creator: (feature) => {
+                            const imageryWindow = window.open(
+                                `https://maps.gpinet.com/gpi-viewer/simple.photo.sphere/?segment=${feature.graphic.attributes.Lidar_Segment_Name}&filename=${feature.graphic.attributes.Filename}`,
+                                feature.graphic.attributes.Lidar_Segment_Name,
+                                'width=750,height=750,popup=true,top=0,left=' + screen.availWidth
+                            );
 
-                    const imageryWindow = window.open(
-                        'http://localhost:1234/examples/gpi-viewer/simple.photo.sphere/',
-                        feature.graphic.attributes.Lidar_Segment_Name,
-                        'width=750,height=750,popup=true,top=0,left=' + screen.availWidth
-                    );
+                            imageryWindow.document.title = feature.graphic.attributes.Lidar_Segment_Name;
 
-                    imageryWindow.document.title = feature.graphic.attributes.Lidar_Segment_Name;
-
-                    // const handle = reactiveUtils.watch(
-                    //     () => view.popup.visible,
-                    //     (isVisible) => {
-                    //         if (!isVisible) {
-                    //             if (imageryWindow) {
-                    //                 imageryWindow.close();
-                    //                 handle.remove();
-                    //             }
-                    //         }
-                    //     }
-                    // );
-                },
+                            const handle = reactiveUtils.watch(
+                                () => view.popup.visible,
+                                (isVisible) => {
+                                    if (!isVisible) {
+                                        if (imageryWindow) {
+                                            imageryWindow.close();
+                                            handle.remove();
+                                        }
+                                    }
+                                }
+                            );
+                        },
+                    },
+                ],
                 actions: [
                     {
                         // This text is displayed as a tooltip
@@ -1585,7 +1636,6 @@ require([
                 ],
             },
         });
-
         const stateOutline = new GeoJSONLayer({
             url: 'https://services2.arcgis.com/XVOqAjTOJ5P6ngMu/arcgis/rest/services/NJ_State_Boundary/FeatureServer/3/query?outFields=*&where=1%3D1&f=geojson',
             renderer: {
@@ -1600,16 +1650,20 @@ require([
                 },
             },
         });
-        let legend = new Legend({
-            view: view,
-            layerInfos: [
-                { layer: retainingWallFeatureLayer, title: 'Retaining Wall' },
-                { layer: rockSlopeFeatureLayer, title: 'Rock Slope' },
-                { layer: crossSectionFeatureLayer, title: 'Cross Section' },
-                // { layer: runCoverageFeatureLayer, title: 'Run Coverage' },
-                { layer: imageryLocationFeatureLayer, title: '360 Imagery' },
-            ],
-        });
+
+        legend.layerInfos.push({ layer: retainingWallFeatureLayer, title: 'Retaining Wall' });
+        legend.layerInfos.push({ layer: rockSlopeFeatureLayer, title: 'Rock & Soil Slope' });
+        legend.layerInfos.push({ layer: crossSectionFeatureLayer, title: 'Cross Section' });
+        legend.layerInfos.push({ layer: runCoverageFeatureLayer, title: 'Lidar Coverage' });
+        legend.layerInfos.push({ layer: imageryLocationFeatureLayer, title: '360 Imagery' });
+
+        view.ui.add(scaleBar, 'bottom-right');
+        view.ui.add(basemapToggle, 'bottom-left');
+        view.ui.move(['zoom'], 'top-right');
+        view.popup.dockOptions = {
+            buttonEnabled: true,
+            position: 'bottom-left',
+        };
         view.ui.add(legend, 'bottom-right');
 
         loadMenu(credentials)
@@ -1623,18 +1677,44 @@ require([
                 reactiveUtils.on(
                     () => view.popup,
                     'trigger-action',
-                    (event) => {
+                    async (event) => {
                         if (event.action.id === 'open-lidar') {
-                            const lidarSegmentName = view.popup.selectedFeature.attributes.Lidar_Segment_Name;
+                            const lidarSegmentName = view.popup.selectedFeature.attributes.Lidar_Segment_Name || view.popup.selectedFeature.attributes.NAME;
                             const routeName = lidarSegmentName.split('_')[0];
                             const routeDirection = lidarSegmentName.split('_')[1];
                             const routeSegment = lidarSegmentName.split('_')[2];
+                            const path = flatLidarList.filter((element) => element.indexOf(routeName) >= 0 && element.indexOf(routeDirection) >= 0 && element.indexOf('_' + routeSegment) >= 0);
 
-                            const path = flatLidarList.filter((element) => element.indexOf(routeName) >= 0 && element.indexOf(routeDirection) >= 0 && element.indexOf(routeSegment) >= 0);
+                            projection.load().then(function () {
+                                // the projection module is loaded. Geometries can be re-projected.
 
-                            if (path.length === 1) {
-                                loadRoute(path[0], lidarSegmentName);
-                            }
+                                // projects each polygon in the array
+                                // project() will use the spatial reference of the first geometry in the array
+                                // as an input spatial reference. It will use the default transformation
+                                // if one is required when converting from input spatial reference
+                                // to the output spatial reference
+                                let outSpatialReference = new SpatialReference({
+                                    wkid: 3424, //Sphere_Sinusoidal projection
+                                });
+
+                                view.popup.selectedFeature.geometry = projection.project(view.popup.selectedFeature.geometry, outSpatialReference);
+
+                                if (path.length === 1) {
+                                    if (view.popup.selectedFeature.layer.title.includes('LidarCoverage')) {
+                                        loadRoute(path[0], lidarSegmentName);
+                                    } else {
+                                        if (view.popup.selectedFeature.geometry.centroid) {
+                                            view.popup.selectedFeature.geometry.centroid.z = 1000000 / view.scale;
+                                            loadRoute(path[0], lidarSegmentName, view.popup.selectedFeature.geometry.centroid);
+                                        } else if (view.popup.selectedFeature.geometry.extent) {
+                                            view.popup.selectedFeature.geometry.extent.center.z = 1000000 / view.scale;
+                                            loadRoute(path[0], lidarSegmentName, view.popup.selectedFeature.geometry.extent.center);
+                                        } else {
+                                            loadRoute(path[0], lidarSegmentName, { x: view.popup.selectedFeature.geometry.x, y: view.popup.selectedFeature.geometry.y, z: 1000000 / view.scale });
+                                        }
+                                    }
+                                }
+                            });
                         }
                     }
                 );
@@ -1644,38 +1724,91 @@ require([
             });
 
         map.add(stateOutline); // adds the layer to the map
-        // map.add(runCoverageFeatureLayer); // adds the layer to the map
+        map.add(runCoverageFeatureLayer); // adds the layer to the map
         map.add(retainingWallFeatureLayer); // adds the layer to the map
         map.add(rockSlopeFeatureLayer); // adds the layer to the map
         map.add(crossSectionFeatureLayer); // adds the layer to the map
         map.add(imageryLocationFeatureLayer); // adds the layer to the map
 
-        let crossSectionFeatureTable = new FeatureTable({
+        let rockSlopeFeatureTable = new FeatureTable({
             view: view,
-            layer: crossSectionFeatureLayer,
-            container: 'cross-section-feature-table-container',
+            layer: rockSlopeFeatureLayer,
+            tableTemplate: {
+                // autocastable to table template
+                columnTemplates: [
+                    { type: 'field', fieldName: 'SRI', label: 'SRI' },
+                    { type: 'field', fieldName: 'MP_Start', label: 'MP Start' },
+                    { type: 'field', fieldName: 'MP_End', label: 'MP End' },
+                    { type: 'field', fieldName: 'DistanceToPavement', label: 'Distance To Pavement (ft)' },
+                    { type: 'field', fieldName: 'Slope1Height', label: 'Slope 1 Height (ft)' },
+                    { type: 'field', fieldName: 'Slope2Height', label: 'Slope 2 Height (ft)' },
+                    { type: 'field', fieldName: 'Slope1Angle', label: 'Slope 1 Angle' },
+                    { type: 'field', fieldName: 'Slope2Angle', label: 'Slope 2 Angle' },
+                    { type: 'field', fieldName: 'MaxSlopeHeight', label: 'Max Slope Height (ft)' },
+                    { type: 'field', fieldName: 'MeshLength', label: 'Mesh Length (ft)' },
+                    { type: 'field', fieldName: 'FenceLength', label: 'Fence Length (ft)' },
+                    { type: 'field', fieldName: 'Shape__Length', label: 'Shape__Length' },
+                    { type: 'field', fieldName: 'SlopeType', label: 'Slope Type' },
+                    { type: 'field', fieldName: 'SideOfRoad', label: 'Side of Road' },
+                    { type: 'field', fieldName: 'SlopeDetected', label: 'Slope Detected' },
+                    { type: 'field', fieldName: 'GuiderailPresent', label: 'Guiderail Present' },
+                    { type: 'field', fieldName: 'CatchOfToe', label: 'Catch Of Toe' },
+                    { type: 'field', fieldName: 'PointCloudExceeded', label: 'Point Cloud Exceeded' },
+                    { type: 'field', fieldName: 'Mid_Slope', label: 'Mid Slope' },
+                    { type: 'field', fieldName: 'AnchDowel', label: 'Anchor/Dowel' },
+                    { type: 'field', fieldName: 'DrapedMesh', label: 'Draped Mesh' },
+                    { type: 'field', fieldName: 'FencePresent', label: 'Fence Present' },
+                    { type: 'field', fieldName: 'Notes', label: 'Notes' },
+                ],
+            },
+            container: 'rock-slope-feature-table-container',
         });
-        featureTable.visibleElements.selectionColumn = false;
-        featureTable.on('cell-click', (event) => {
-            if (featureTable.highlightIds.includes(event.objectId)) {
-                featureTable.highlightIds.remove(event.objectId);
+        rockSlopeFeatureTable.visibleElements.selectionColumn = false;
+        rockSlopeFeatureTable.on('cell-click', (event) => {
+            if (rockSlopeFeatureTable.highlightIds.includes(event.objectId)) {
+                rockSlopeFeatureTable.highlightIds.remove(event.objectId);
             } else {
-                featureTable.highlightIds.push(event.objectId);
+                rockSlopeFeatureTable.highlightIds.push(event.objectId);
             }
         });
 
-        new FeatureTable({
-            view: view,
-            layer: rockSlopeFeatureLayer,
-            container: 'rock-slope-feature-table-container',
-        });
-        new FeatureTable({
+        let retainingWallFeatureTable = new FeatureTable({
             view: view,
             layer: retainingWallFeatureLayer,
+            tableTemplate: {
+                columnTemplates: [
+                    { type: 'field', fieldName: 'SRI', label: 'SRI' },
+                    { type: 'field', fieldName: 'MP_Start', label: 'MP_Start' },
+                    { type: 'field', fieldName: 'MP_End', label: 'MP_End' },
+                    { type: 'field', fieldName: 'WallType', label: 'Wall Type' },
+                    { type: 'field', fieldName: 'SideOfRoad', label: 'Side Of Road' },
+                    { type: 'field', fieldName: 'WallLength', label: 'Wall Length (ft)' },
+                    { type: 'field', fieldName: 'MinWallHeight', label: 'Minimum Wall Height (ft)' },
+                    { type: 'field', fieldName: 'MaxWallHeight', label: 'Maximum Wall Height (ft)' },
+                    { type: 'field', fieldName: 'DistanceToPavement', label: 'Distance to Pavement (ft)' },
+                    { type: 'field', fieldName: 'GuiderailPresent', label: 'Guiderail Present' },
+                    { type: 'field', fieldName: 'GuiderailLength', label: 'Guiderail Length (ft)' },
+                    { type: 'field', fieldName: 'FrontSlopePresent', label: 'Front Slope Present?' },
+                    { type: 'field', fieldName: 'FrontSlopeLength', label: 'Front Slope Length (ft)' },
+                    { type: 'field', fieldName: 'BackSlopePresent', label: 'Back Slope Present?' },
+                    { type: 'field', fieldName: 'BackSlopeLength', label: 'Back Slope Length (ft)' },
+                    { type: 'field', fieldName: 'BackSlopeAngle', label: 'Back Slope Angle' },
+                    { type: 'field', fieldName: 'Notes', label: 'Notes' },
+                    { type: 'field', fieldName: 'Shape__Length', label: 'Shape__Length' },
+                ],
+            },
             container: 'retaining-wall-feature-table-container',
+        });
+        retainingWallFeatureTable.visibleElements.selectionColumn = false;
+        retainingWallFeatureTable.on('cell-click', (event) => {
+            if (retainingWallFeatureTable.highlightIds.includes(event.objectId)) {
+                retainingWallFeatureTable.highlightIds.remove(event.objectId);
+            } else {
+                retainingWallFeatureTable.highlightIds.push(event.objectId);
+            }
         });
 
         new AssetFilter(view, 'Retaining Wall', retainingWallFeatureLayer);
-        new AssetFilter(view, 'Rock Slope', rockSlopeFeatureLayer);
+        new AssetFilter(view, 'Rock & Soil Slope', rockSlopeFeatureLayer);
     });
 });
