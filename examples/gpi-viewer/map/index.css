@@ -169,6 +169,7 @@ input[type='text'] {
 }
 .feature-tab-container {
     width: 100%;
+    position: relative;
 }
 .esri-feature-table {
     height: 250px;
@@ -191,4 +192,19 @@ input[type='text'] {
 }
 .esri-feature__content-element:nth-of-type(2) {
     padding: 0;
+}
+
+.shepherd-header {
+    padding: 0.25em 0.75rem 0;
+    background-color: lightgrey;
+}
+
+#restart-tour-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 34px;
+}
+.extra-highlighted {
+    border: rgba(36, 122, 216, 1) 5px solid !important;
 }

@@ -12,6 +12,9 @@
         <link rel="stylesheet" type="text/css" href="../../../libs/openlayers3/ol.css" />
         <link rel="stylesheet" type="text/css" href="../../../libs/spectrum/spectrum.css" />
         <link rel="stylesheet" type="text/css" href="../../../libs/jstree/themes/mixed/style.css" />
+
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/shepherd.js/dist/css/shepherd.css" />
+
         <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
         <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css" />
         <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/4.31/esri/themes/light/main.css" />
@@ -34,10 +37,10 @@
                     <calcite-tab-title selected>Rock & Soil Slope</calcite-tab-title>
                     <calcite-tab-title>Retaining Wall</calcite-tab-title>
                 </calcite-tab-nav>
-                <calcite-tab><div id="rock-slope-feature-table-container"></div></calcite-tab>
+                <calcite-tab selected><div id="rock-slope-feature-table-container"></div></calcite-tab>
                 <calcite-tab><div id="retaining-wall-feature-table-container"></div></calcite-tab>
-                <calcite-tab selected><div id="cross-section-feature-table-container"></div></calcite-tab>
             </calcite-tabs>
+            <calcite-button id="restart-tour-button" icon-start="folder-plus" label="Restart Tour">Restart Tour</calcite-button>
         </div>
         <div id="panel-container"></div>
         <div id="potree-container" class="hidden">
