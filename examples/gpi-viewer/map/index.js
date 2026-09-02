@@ -113,7 +113,7 @@ require([
                         .map((nested) =>
                             nested.map((coord) => {
                                 return { x: coord[0], y: coord[1], elevation: coord[2] };
-                            })
+                            }),
                         )
                         .flat();
                     const polygonShape = new THREE.Shape(coordinates.map((coord) => new THREE.Vector3(coord.x, coord.y, coord.elevation)));
@@ -126,7 +126,7 @@ require([
                             side: THREE.DoubleSide,
                             wireframe: true,
                             vertexColors: true,
-                        })
+                        }),
                     );
 
                     polygon.properties = feature.properties;
@@ -192,8 +192,10 @@ require([
                         positionCamera(metadata);
                     }
 
-                    if (viewer.scene.pointclouds.map((pointCloud) => pointCloud.name).indexOf(metadata.name) < 0) {
-                        Potree.loadPointCloud(metadataPath, metadata.name, async (e) => {
+                    const pointCloudName = `${folderPath}/${metadata.name}`;
+
+                    if (viewer.scene.pointclouds.map((pointCloud) => pointCloud.name).indexOf(pointCloudName) < 0) {
+                        Potree.loadPointCloud(metadataPath, pointCloudName, async (e) => {
                             let scene = viewer.scene;
                             let pointcloud = e.pointcloud;
                             let material = pointcloud.material;
@@ -289,7 +291,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // POINT
@@ -310,7 +312,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // DISTANCE
@@ -328,7 +330,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // HEIGHT
@@ -348,7 +350,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // CIRCLE
@@ -370,7 +372,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // AZIMUTH
@@ -393,7 +395,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // AREA
@@ -411,7 +413,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === measurement.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // // VOLUME
@@ -450,7 +452,7 @@ require([
                         let jsonNode = measurementsRoot.children.find((child) => child.data.uuid === profile.uuid);
                         $.jstree.reference(jsonNode.id).deselect_all();
                         $.jstree.reference(jsonNode.id).select_node(jsonNode.id);
-                    })
+                    }),
                 );
 
                 // View Profile
@@ -458,7 +460,7 @@ require([
                     this.createToolIcon(Potree.resourcePath + '/icons/eye.svg', '[title]tt.view_selected_profile', 'View Selected Profile', () => {
                         let show2DProfileIcon = document.getElementById('show_2d_profile');
                         show2DProfileIcon.click();
-                    })
+                    }),
                 );
 
                 // // ANNOTATION
@@ -478,7 +480,7 @@ require([
                 elToolbar.append(
                     this.createToolIcon(Potree.resourcePath + '/icons/reset_tools.svg', '[title]tt.remove_all_measurement', 'Remove All Measurements', () => {
                         viewer.scene.removeAllMeasurements();
-                    })
+                    }),
                 );
 
                 {
@@ -1214,7 +1216,7 @@ require([
                         } else {
                             filterButton.classList.add('hidden');
                         }
-                    }
+                    },
                 );
 
                 view.whenLayerView(featureLayer).then((layerView) => {
@@ -1227,7 +1229,7 @@ require([
                             } else {
                                 self.applyButton.removeAttribute('loading');
                             }
-                        }
+                        },
                     );
                 });
 
@@ -1357,6 +1359,7 @@ require([
                 // });
                 const retainingWallFeatureLayer = new FeatureLayer({
                     url: featureServerURL + '0',
+                    outFields: ['*'],
                     popupTemplate: {
                         title: 'Retaining Wall: {SRI} [{MP_Start} - {MP_End}]',
                         outFields: ['*'],
@@ -1365,6 +1368,7 @@ require([
                                 type: 'fields',
                                 fieldInfos: [
                                     { fieldName: 'SRI', label: 'SRI' },
+                                    { fieldName: 'YearCollected', label: 'Year Collected' },
                                     { fieldName: 'MP_Start', label: 'MP_Start' },
                                     { fieldName: 'MP_End', label: 'MP_End' },
                                     { fieldName: 'WallType', label: 'Wall Type' },
@@ -1403,6 +1407,7 @@ require([
                     },
                     fields: [
                         new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
+                        new Field({ name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' }),
                         new Field({ name: 'WallType', alias: 'Wall Type', type: 'string' }),
                         new Field({ name: 'SideOfRoad', alias: 'Side Of Road', type: 'string' }),
                         new Field({ name: 'MP_Start', alias: 'MP_Start', type: 'double' }),
@@ -1424,15 +1429,16 @@ require([
                 });
                 const rockSlopeFeatureLayer = new FeatureLayer({
                     url: featureServerURL + '1',
+                    outFields: ['*'],
                     popupTemplate: {
-                        title: `Rock & Soil Slope: {SRI}
-                 [{MP_Start} - {MP_End}]`,
+                        title: `Rock & Soil Slope: {SRI} [{MP_Start} - {MP_End}]`,
                         outFields: ['*'],
                         content: [
                             {
                                 type: 'fields',
                                 fieldInfos: [
                                     { fieldName: 'SRI', label: 'SRI' },
+                                    { fieldName: 'YearCollected', label: 'Year Collected' },
                                     { fieldName: 'MP_Start', label: 'MP_Start' },
                                     { fieldName: 'MP_End', label: 'MP_End' },
                                     { fieldName: 'DistanceToPavement', label: 'Distance To Pavement (ft)' },
@@ -1487,6 +1493,7 @@ require([
                         new Field({ name: 'FenceLength', alias: 'Fence Length (ft)', type: 'double' }),
                         new Field({ name: 'Shape__Length', alias: 'Shape__Length', type: 'double' }),
                         new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
+                        new Field({ name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' }),
                         new Field({ name: 'SlopeType', alias: 'Slope Type', type: 'string' }),
                         new Field({ name: 'SideOfRoad', alias: 'Side of Road', type: 'string' }),
                         new Field({ name: 'SlopeDetected', alias: 'Slope Detected', type: 'string' }),
@@ -1502,6 +1509,7 @@ require([
                 });
                 const crossSectionFeatureLayer = new FeatureLayer({
                     url: featureServerURL + '2',
+                    outFields: ['*'],
                     popupTemplate: {
                         title: 'Cross Section: {SRI} [{MP_Start} - {MP_End}]',
                         outFields: ['*'],
@@ -1510,6 +1518,7 @@ require([
                                 type: 'fields',
                                 fieldInfos: [
                                     { fieldName: 'SRI', label: 'SRI' },
+                                    { fieldName: 'YearCollected', label: 'Year Collected' },
                                     { fieldName: 'Shape__Length', label: 'Shape__Length' },
                                 ],
                             },
@@ -1530,10 +1539,15 @@ require([
                             },
                         ],
                     },
-                    fields: [new Field({ name: 'SRI', alias: 'SRI', type: 'string' }), new Field({ name: 'Shape__Length', alias: 'Shape__Length', type: 'double' })],
+                    fields: [
+                        new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
+                        new Field({ name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' }),
+                        new Field({ name: 'Shape__Length', alias: 'Shape__Length', type: 'double' }),
+                    ],
                 });
                 const runCoverageFeatureLayer = new FeatureLayer({
                     url: featureServerURL + '3',
+                    outFields: ['*'],
                     maxScale: 9000,
                     renderer: {
                         type: 'simple',
@@ -1559,6 +1573,11 @@ require([
                             type: 'string',
                         },
                         {
+                            name: 'YearCollected',
+                            alias: 'Year Collected',
+                            type: 'small-integer',
+                        },
+                        {
                             name: 'path',
                             alias: 'path',
                             type: 'string',
@@ -1573,6 +1592,10 @@ require([
                                     fieldName: 'NAME',
                                 },
                                 {
+                                    fieldName: 'YearCollected',
+                                    label: 'Year Collected',
+                                },
+                                {
                                     fieldName: 'path',
                                     visible: false,
                                 },
@@ -1580,7 +1603,7 @@ require([
                         },
                     ],
                     popupTemplate: {
-                        title: 'Route Segment {NAME}',
+                        title: 'Route Segment {NAME} ({YearCollected})',
                         actions: [
                             {
                                 // This text is displayed as a tooltip
@@ -1595,6 +1618,7 @@ require([
                 });
                 const imageryLocationFeatureLayer = new FeatureLayer({
                     url: featureServerURL + '5',
+                    outFields: ['*'],
                     minScale: 9000,
                     renderer: {
                         type: 'simple',
@@ -1612,21 +1636,34 @@ require([
                         { name: 'SRI', alias: 'SRI', type: 'string' },
                         { name: 'Direction', alias: 'Direction', type: 'string' },
                         { name: 'Lidar_Segment_Name', alias: 'Lidar Segment Name', type: 'string' },
+                        { name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' },
                     ],
                     popupTemplate: {
-                        title: '360 Imagery Point: {Lidar_Segment_Name}',
+                        title: '360 Imagery Point: {Lidar_Segment_Name} ({YearCollected})',
                         content: [
                             {
                                 type: 'custom', // Autocasts as new FieldsContent()
                                 outFields: ['*'],
                                 creator: (feature) => {
+                                    const attributes = feature.graphic.attributes;
+
+                                    if (!attributes.YearCollected) {
+                                        document.getElementById('no-results').setAttribute('open', '');
+                                        return document.createTextNode('Collection year is unavailable.');
+                                    }
+
+                                    const query = new URLSearchParams({
+                                        segment: attributes.Lidar_Segment_Name,
+                                        filename: attributes.Filename,
+                                        year: attributes.YearCollected,
+                                    });
                                     const imageryWindow = window.open(
-                                        `https://maps.gpinet.com/gpi-viewer/simple.photo.sphere/?segment=${feature.graphic.attributes.Lidar_Segment_Name}&filename=${feature.graphic.attributes.Filename}`,
-                                        feature.graphic.attributes.Lidar_Segment_Name,
-                                        'width=750,height=750,popup=true,top=0,left=' + screen.availWidth
+                                        `https://maps.gpinet.com/gpi-viewer/simple.photo.sphere/?${query}`,
+                                        attributes.Lidar_Segment_Name,
+                                        'width=750,height=750,popup=true,top=0,left=' + screen.availWidth,
                                     );
 
-                                    imageryWindow.document.title = feature.graphic.attributes.Lidar_Segment_Name;
+                                    imageryWindow.document.title = attributes.Lidar_Segment_Name;
 
                                     const handle = reactiveUtils.watch(
                                         () => view.popup.visible,
@@ -1637,7 +1674,7 @@ require([
                                                     handle.remove();
                                                 }
                                             }
-                                        }
+                                        },
                                     );
                                 },
                             },
@@ -1695,11 +1732,29 @@ require([
                     'trigger-action',
                     async (event) => {
                         if (event.action.id === 'open-lidar') {
-                            const lidarSegmentName = view.popup.selectedFeature.attributes.Lidar_Segment_Name || view.popup.selectedFeature.attributes.NAME;
-                            const routeName = lidarSegmentName.split('_')[0];
-                            const routeDirection = lidarSegmentName.split('_')[1];
-                            const routeSegment = lidarSegmentName.split('_')[2];
-                            const path = flatLidarList.filter((element) => element.indexOf(routeName) >= 0 && element.indexOf(routeDirection) >= 0 && element.indexOf('_' + routeSegment) >= 0);
+                            const attributes = view.popup.selectedFeature.attributes;
+                            const lidarSegmentName = attributes.Lidar_Segment_Name || attributes.NAME;
+                            const yearCollected = attributes.YearCollected;
+
+                            if (!lidarSegmentName || !yearCollected) {
+                                document.getElementById('no-results').setAttribute('open', '');
+                                return;
+                            }
+
+                            const segmentParts = lidarSegmentName.split('_');
+                            const routeName = segmentParts[0];
+                            const routeDirection = segmentParts[1];
+                            const sri = String(attributes.SRI || `${routeName.padStart(8, '0')}__`).trim();
+                            const sriRouteName = sri.endsWith('__') ? sri.slice(0, -2) : routeName.padStart(8, '0');
+                            const normalizedSegmentName = [sriRouteName, ...segmentParts.slice(1)].join('_');
+                            const lidarDirectory = `lidar/${yearCollected}/${sri}/${routeDirection}`;
+                            const expectedPaths = new Set([`${lidarDirectory}/${lidarSegmentName}.las`, `${lidarDirectory}/${normalizedSegmentName}.las`]);
+                            const lidarPath = flatLidarList.find((element) => expectedPaths.has(element.replaceAll('\\', '/')));
+
+                            if (!lidarPath) {
+                                document.getElementById('no-results').setAttribute('open', '');
+                                return;
+                            }
 
                             projection.load().then(function () {
                                 // the projection module is loaded. Geometries can be re-projected.
@@ -1715,24 +1770,22 @@ require([
 
                                 view.popup.selectedFeature.geometry = projection.project(view.popup.selectedFeature.geometry, outSpatialReference);
 
-                                if (path.length === 1) {
-                                    if (view.popup.selectedFeature.layer.title.includes('LidarCoverage')) {
-                                        loadRoute(path[0], lidarSegmentName);
+                                if (view.popup.selectedFeature.layer.title.includes('LidarCoverage')) {
+                                    loadRoute(lidarPath, lidarSegmentName);
+                                } else {
+                                    if (view.popup.selectedFeature.geometry.centroid) {
+                                        view.popup.selectedFeature.geometry.centroid.z = 1000000 / view.scale;
+                                        loadRoute(lidarPath, lidarSegmentName, view.popup.selectedFeature.geometry.centroid);
+                                    } else if (view.popup.selectedFeature.geometry.extent) {
+                                        view.popup.selectedFeature.geometry.extent.center.z = 1000000 / view.scale;
+                                        loadRoute(lidarPath, lidarSegmentName, view.popup.selectedFeature.geometry.extent.center);
                                     } else {
-                                        if (view.popup.selectedFeature.geometry.centroid) {
-                                            view.popup.selectedFeature.geometry.centroid.z = 1000000 / view.scale;
-                                            loadRoute(path[0], lidarSegmentName, view.popup.selectedFeature.geometry.centroid);
-                                        } else if (view.popup.selectedFeature.geometry.extent) {
-                                            view.popup.selectedFeature.geometry.extent.center.z = 1000000 / view.scale;
-                                            loadRoute(path[0], lidarSegmentName, view.popup.selectedFeature.geometry.extent.center);
-                                        } else {
-                                            loadRoute(path[0], lidarSegmentName, { x: view.popup.selectedFeature.geometry.x, y: view.popup.selectedFeature.geometry.y, z: 1000000 / view.scale });
-                                        }
+                                        loadRoute(lidarPath, lidarSegmentName, { x: view.popup.selectedFeature.geometry.x, y: view.popup.selectedFeature.geometry.y, z: 1000000 / view.scale });
                                     }
                                 }
                             });
                         }
-                    }
+                    },
                 );
 
                 // map.add(elevationLayer); // adds the layer to the map
@@ -2074,7 +2127,7 @@ require([
                                 closeLidarViewerButton.click();
                                 view.popup.visible = false;
                                 view.zoom = 8;
-                                (view.center = [-74.4057, 40.0583]), tour.next();
+                                ((view.center = [-74.4057, 40.0583]), tour.next());
                             },
                         },
                     ],
