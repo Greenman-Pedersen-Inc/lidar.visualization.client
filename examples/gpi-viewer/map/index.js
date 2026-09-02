@@ -1,5 +1,4 @@
-// import * as THREE from '../libs/three.js/build/three.module.js';
-import * as THREE from '../../../libs/three.js/build/three.module.js';
+import * as THREE from '../libs/three.js/build/three.module.js';
 import Shepherd from 'https://cdn.jsdelivr.net/npm/shepherd.js@13.0.0/dist/esm/shepherd.mjs';
 import { offset } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.6.13/+esm';
 
