@@ -1367,7 +1367,7 @@ require([
                                 type: 'fields',
                                 fieldInfos: [
                                     { fieldName: 'SRI', label: 'SRI' },
-                                    { fieldName: 'YearCollected', label: 'Year Collected' },
+                                    { fieldName: 'YMCollected', label: 'Year/Month Collected' },
                                     { fieldName: 'MP_Start', label: 'MP_Start' },
                                     { fieldName: 'MP_End', label: 'MP_End' },
                                     { fieldName: 'WallType', label: 'Wall Type' },
@@ -1407,6 +1407,7 @@ require([
                     fields: [
                         new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
                         new Field({ name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' }),
+                        new Field({ name: 'YMCollected', alias: 'Year/Month Collected', type: 'string' }),
                         new Field({ name: 'WallType', alias: 'Wall Type', type: 'string' }),
                         new Field({ name: 'SideOfRoad', alias: 'Side Of Road', type: 'string' }),
                         new Field({ name: 'MP_Start', alias: 'MP_Start', type: 'double' }),
@@ -1437,7 +1438,7 @@ require([
                                 type: 'fields',
                                 fieldInfos: [
                                     { fieldName: 'SRI', label: 'SRI' },
-                                    { fieldName: 'YearCollected', label: 'Year Collected' },
+                                    { fieldName: 'YMCollected', label: 'Year/Month Collected' },
                                     { fieldName: 'MP_Start', label: 'MP_Start' },
                                     { fieldName: 'MP_End', label: 'MP_End' },
                                     { fieldName: 'DistanceToPavement', label: 'Distance To Pavement (ft)' },
@@ -1493,6 +1494,7 @@ require([
                         new Field({ name: 'Shape__Length', alias: 'Shape__Length', type: 'double' }),
                         new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
                         new Field({ name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' }),
+                        new Field({ name: 'YMCollected', alias: 'Year/Month Collected', type: 'string' }),
                         new Field({ name: 'SlopeType', alias: 'Slope Type', type: 'string' }),
                         new Field({ name: 'SideOfRoad', alias: 'Side of Road', type: 'string' }),
                         new Field({ name: 'SlopeDetected', alias: 'Slope Detected', type: 'string' }),
@@ -1517,7 +1519,7 @@ require([
                                 type: 'fields',
                                 fieldInfos: [
                                     { fieldName: 'SRI', label: 'SRI' },
-                                    { fieldName: 'YearCollected', label: 'Year Collected' },
+                                    { fieldName: 'YMCollected', label: 'Year/Month Collected' },
                                     { fieldName: 'Shape__Length', label: 'Shape__Length' },
                                 ],
                             },
@@ -1541,6 +1543,7 @@ require([
                     fields: [
                         new Field({ name: 'SRI', alias: 'SRI', type: 'string' }),
                         new Field({ name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' }),
+                        new Field({ name: 'YMCollected', alias: 'Year/Month Collected', type: 'string' }),
                         new Field({ name: 'Shape__Length', alias: 'Shape__Length', type: 'double' }),
                     ],
                 });
@@ -1577,6 +1580,11 @@ require([
                             type: 'small-integer',
                         },
                         {
+                            name: 'YMCollected',
+                            alias: 'Year/Month Collected',
+                            type: 'string',
+                        },
+                        {
                             name: 'path',
                             alias: 'path',
                             type: 'string',
@@ -1591,8 +1599,8 @@ require([
                                     fieldName: 'NAME',
                                 },
                                 {
-                                    fieldName: 'YearCollected',
-                                    label: 'Year Collected',
+                                    fieldName: 'YMCollected',
+                                    label: 'Year/Month Collected',
                                 },
                                 {
                                     fieldName: 'path',
@@ -1602,7 +1610,7 @@ require([
                         },
                     ],
                     popupTemplate: {
-                        title: 'Route Segment {NAME} ({YearCollected})',
+                        title: 'Route Segment {NAME} ({YMCollected})',
                         actions: [
                             {
                                 // This text is displayed as a tooltip
@@ -1636,9 +1644,10 @@ require([
                         { name: 'Direction', alias: 'Direction', type: 'string' },
                         { name: 'Lidar_Segment_Name', alias: 'Lidar Segment Name', type: 'string' },
                         { name: 'YearCollected', alias: 'Year Collected', type: 'small-integer' },
+                        { name: 'YMCollected', alias: 'Year/Month Collected', type: 'string' },
                     ],
                     popupTemplate: {
-                        title: '360 Imagery Point: {Lidar_Segment_Name} ({YearCollected})',
+                        title: '360 Imagery Point: {Lidar_Segment_Name} ({YMCollected})',
                         content: [
                             {
                                 type: 'custom', // Autocasts as new FieldsContent()
@@ -1802,6 +1811,7 @@ require([
                         // autocastable to table template
                         columnTemplates: [
                             { type: 'field', fieldName: 'SRI', label: 'SRI' },
+                            { type: 'field', fieldName: 'YMCollected', label: 'Year/Month Collected' },
                             { type: 'field', fieldName: 'MP_Start', label: 'MP Start' },
                             { type: 'field', fieldName: 'MP_End', label: 'MP End' },
                             { type: 'field', fieldName: 'DistanceToPavement', label: 'Distance To Pavement (ft)' },
@@ -1834,6 +1844,7 @@ require([
                     tableTemplate: {
                         columnTemplates: [
                             { type: 'field', fieldName: 'SRI', label: 'SRI' },
+                            { type: 'field', fieldName: 'YMCollected', label: 'Year/Month Collected' },
                             { type: 'field', fieldName: 'MP_Start', label: 'MP_Start' },
                             { type: 'field', fieldName: 'MP_End', label: 'MP_End' },
                             { type: 'field', fieldName: 'WallType', label: 'Wall Type' },
