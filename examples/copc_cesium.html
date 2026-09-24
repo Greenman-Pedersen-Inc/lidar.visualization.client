@@ -55,6 +55,7 @@
             <label for="copc_file_selector">Point cloud:</label>
             <select id="copc_file_selector"></select>
             <label for="basemap_visible"><input id="basemap_visible" type="checkbox" checked /> Imagery basemap</label>
+            <label for="terrain_visible"><input id="terrain_visible" type="checkbox" checked /> v3 terrain</label>
         </div>
 
         <script type="module">
@@ -144,11 +145,13 @@
             if (Number.isFinite(requestedTerrainExaggeration) && requestedTerrainExaggeration > 0) {
                 cesiumOptions.terrainExaggeration = requestedTerrainExaggeration;
             }
+            let terrainProvider = null;
             if (terrainUrl) {
-                cesiumOptions.terrainProvider = new Cesium.CesiumTerrainProvider({
+                terrainProvider = new Cesium.CesiumTerrainProvider({
                     url: terrainUrl,
                     requestVertexNormals: true,
                 });
+                cesiumOptions.terrainProvider = terrainProvider;
             }
             window.cesiumViewer = new Cesium.Viewer('cesium_container', cesiumOptions);
             const basemapVisibleInput = document.getElementById('basemap_visible');
@@ -156,6 +159,14 @@
                 for (let index = 0; index < cesiumViewer.imageryLayers.length; index++) {
                     cesiumViewer.imageryLayers.get(index).show = basemapVisibleInput.checked;
                 }
+            });
+            const terrainVisibleInput = document.getElementById('terrain_visible');
+            terrainVisibleInput.disabled = !terrainProvider;
+            terrainVisibleInput.addEventListener('change', () => {
+                cesiumViewer.terrainProvider =
+                    terrainVisibleInput.checked && terrainProvider
+                        ? terrainProvider
+                        : new Cesium.EllipsoidTerrainProvider();
             });
 
             window.potreeViewer = new Potree.Viewer(document.getElementById('potree_render_area'), {
