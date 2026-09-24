@@ -162,7 +162,6 @@
                 cesiumViewer.scene.globe.baseColor = visible
                     ? Cesium.Color.WHITE
                     : Cesium.Color.fromCssColorString('#9ca4ab');
-                cesiumViewer.scene.globe.enableLighting = !visible;
             }
             basemapVisibleInput.addEventListener('change', () => setBasemapVisibility(basemapVisibleInput.checked));
             const terrainVisibleInput = document.getElementById('terrain_visible');
