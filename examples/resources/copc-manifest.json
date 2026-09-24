@@ -1,0 +1,45 @@
+{
+    "baseUrl": "https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/lidar/",
+    "files": [
+        {
+            "name": "0009__N_111.93",
+            "path": "0009__N_111.93.copc.laz"
+        },
+        {
+            "name": "0009__N_112.28",
+            "path": "0009__N_112.28.copc.laz"
+        },
+        {
+            "name": "0009__N_112.56",
+            "path": "0009__N_112.56.copc.laz"
+        },
+        {
+            "name": "0009__N_112.90",
+            "path": "0009__N_112.90.copc.laz"
+        },
+        {
+            "name": "0009__N_113.52",
+            "path": "0009__N_113.52.copc.laz"
+        },
+        {
+            "name": "0009__N_114.15",
+            "path": "0009__N_114.15.copc.laz"
+        },
+        {
+            "name": "0009__N_114.78",
+            "path": "0009__N_114.78.copc.laz"
+        },
+        {
+            "name": "0009__N_115.42",
+            "path": "0009__N_115.42.copc.laz"
+        },
+        {
+            "name": "0009__N_116.05",
+            "path": "0009__N_116.05.copc.laz"
+        },
+        {
+            "name": "0009__N_116.69",
+            "path": "0009__N_116.69.copc.laz"
+        }
+    ]
+}
