@@ -201,7 +201,8 @@
 
             const pointcloudProjection = loaded[0].pointcloud.projection || EPSG_3424;
             const toMap = proj4(pointcloudProjection, proj4.defs('WGS84'));
-            const requestedVerticalOffset = Number(getQueryParam('offset'));
+            const offsetParameter = getQueryParam('offset');
+            const requestedVerticalOffset = offsetParameter === null ? Number.NaN : Number(offsetParameter);
             const verticalOffset = Number.isFinite(requestedVerticalOffset) ? requestedVerticalOffset : -33;
             potreeViewer.fitToScreen(0.5);
 
