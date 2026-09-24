@@ -54,8 +54,7 @@
         >
             <label for="copc_file_selector">Point cloud:</label>
             <select id="copc_file_selector"></select>
-            <label for="vertical_offset">Vertical offset (m):</label>
-            <input id="vertical_offset" type="number" value="-33" step="1" style="width: 65px" />
+            <label for="basemap_visible"><input id="basemap_visible" type="checkbox" checked /> Imagery basemap</label>
         </div>
 
         <script type="module">
@@ -152,6 +151,12 @@
                 });
             }
             window.cesiumViewer = new Cesium.Viewer('cesium_container', cesiumOptions);
+            const basemapVisibleInput = document.getElementById('basemap_visible');
+            basemapVisibleInput.addEventListener('change', () => {
+                for (let index = 0; index < cesiumViewer.imageryLayers.length; index++) {
+                    cesiumViewer.imageryLayers.get(index).show = basemapVisibleInput.checked;
+                }
+            });
 
             window.potreeViewer = new Potree.Viewer(document.getElementById('potree_render_area'), {
                 useDefaultRenderLoop: false,
@@ -185,16 +190,12 @@
 
             const pointcloudProjection = loaded[0].pointcloud.projection || EPSG_3424;
             const toMap = proj4(pointcloudProjection, proj4.defs('WGS84'));
-            const verticalOffsetInput = document.getElementById('vertical_offset');
             const requestedVerticalOffset = Number(getQueryParam('offset'));
-            if (Number.isFinite(requestedVerticalOffset)) {
-                verticalOffsetInput.value = requestedVerticalOffset;
-            }
+            const verticalOffset = Number.isFinite(requestedVerticalOffset) ? requestedVerticalOffset : -33;
             potreeViewer.fitToScreen(0.5);
 
             function toCesium(position) {
                 const [longitude, latitude] = toMap.forward([position.x, position.y]);
-                const verticalOffset = Number(verticalOffsetInput.value) || 0;
                 const height = position.z * US_SURVEY_FOOT_TO_METERS + verticalOffset;
                 return Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
             }
