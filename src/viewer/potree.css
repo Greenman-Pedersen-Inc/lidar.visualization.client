@@ -819,8 +819,63 @@ body {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	margin-top: 8px;
 	cursor: pointer;
+}
+
+.potree-roadway-navigator__footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 8px;
+}
+
+.potree-roadway-navigator__align-button,
+.potree-roadway-navigator__reset-button {
+	height: 28px;
+	padding: 0 10px;
+	border: 1px solid #718092;
+	border-radius: 4px;
+	color: #f5f7fa;
+	background: #344150;
+	font: 600 12px/1 sans-serif;
+	cursor: pointer;
+}
+
+.potree-roadway-navigator__alignment {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px 16px;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.potree-roadway-navigator__alignment[hidden] {
+	display: none;
+}
+
+.potree-roadway-navigator__alignment label {
+	display: grid;
+	grid-template-columns: 52px minmax(0, 1fr) 54px;
+	align-items: center;
+	gap: 7px;
+}
+
+.potree-roadway-navigator__alignment input[type='range'] {
+	min-width: 0;
+	width: 100%;
+	accent-color: #49b9f2;
+}
+
+.potree-roadway-navigator__alignment output {
+	color: #c7d0da;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+.potree-roadway-navigator__reset-button {
+	grid-column: 2;
+	justify-self: end;
 }
 
 .potree-roadway-navigator[hidden] {
@@ -891,6 +946,8 @@ body {
 
 .unfocus-button:hover,
 .potree-roadway-navigator__controls button:hover:not(:disabled),
+.potree-roadway-navigator__align-button:hover,
+.potree-roadway-navigator__reset-button:hover,
 .potree-roadway-toolbar select:hover {
 	border-color: #49b9f2;
 	background-color: #3d4d5f;
@@ -909,5 +966,13 @@ body {
 		align-items: flex-start;
 		flex-direction: column;
 		gap: 2px;
+	}
+
+	.potree-roadway-navigator__alignment {
+		grid-template-columns: 1fr;
+	}
+
+	.potree-roadway-navigator__reset-button {
+		grid-column: 1;
 	}
 }

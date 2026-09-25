@@ -44,6 +44,7 @@
             <select id="copc_file_selector"></select>
             <label id="roadway_selector_control" for="roadway_selector" hidden>Roadway:</label>
             <select id="roadway_selector" hidden></select>
+            <label for="pointcloud_visible"><input id="pointcloud_visible" type="checkbox" checked /> Point cloud</label>
             <label for="basemap_visible"><input id="basemap_visible" type="checkbox" checked /> Imagery basemap</label>
             <label for="terrain_visible"><input id="terrain_visible" type="checkbox" checked /> v3 terrain</label>
         </div>
@@ -189,6 +190,12 @@
                 material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
                 material.activeAttributeName = getQueryParam('c') || 'rgba';
             });
+            const pointcloudVisibleInput = document.getElementById('pointcloud_visible');
+            pointcloudVisibleInput.addEventListener('change', () => {
+                loaded.forEach((event) => {
+                    event.pointcloud.visible = pointcloudVisibleInput.checked;
+                });
+            });
 
             const pointcloudProjection = loaded[0].pointcloud.projection || EPSG_3424;
             const toMap = proj4(pointcloudProjection, proj4.defs('WGS84'));
@@ -219,6 +226,37 @@
                 return new URL(path, manifestUrl).href;
             }
 
+            function getRoadwayCalibration(configuration) {
+                const defaults = {
+                    headingOffset: Number(configuration.headingOffset) || 0,
+                    pitchOffset: Number(configuration.pitchOffset) || 0,
+                    rollOffset: Number(configuration.rollOffset) || 0,
+                    positionOffset: Array.isArray(configuration.positionOffset)
+                        ? configuration.positionOffset.map((value) => Number(value) || 0)
+                        : [0, 0, 0],
+                };
+                const storageKey = `potree-roadway-calibration:${configuration.name || configuration.csv}`;
+                let saved = {};
+                try {
+                    saved = JSON.parse(window.localStorage.getItem(storageKey)) || {};
+                } catch (error) {
+                    console.warn('Ignoring invalid saved roadway calibration', error);
+                }
+
+                return {
+                    defaults,
+                    storageKey,
+                    current: {
+                        headingOffset: Number(saved.headingOffset ?? defaults.headingOffset) || 0,
+                        pitchOffset: Number(saved.pitchOffset ?? defaults.pitchOffset) || 0,
+                        rollOffset: Number(saved.rollOffset ?? defaults.rollOffset) || 0,
+                        positionOffset: Array.isArray(saved.positionOffset)
+                            ? saved.positionOffset.map((value) => Number(value) || 0)
+                            : defaults.positionOffset.slice(),
+                    },
+                };
+            }
+
             async function loadRoadwayImagery(configuration) {
                 roadwaySelector.disabled = true;
 
@@ -238,6 +276,7 @@
                     const csvDirectory = csvUrl.slice(0, separator);
                     const csvFilename = csvUrl.slice(separator + 1);
                     const imagePath = resolveManifestUrl(configuration.images || csvDirectory).replace(/\/$/, '');
+                    const calibration = getRoadwayCalibration(configuration);
 
                     roadwayImages = await Potree.Images360Loader.load(
                         csvDirectory,
@@ -249,10 +288,10 @@
                             elevationScale: configuration.elevationScale,
                             imageExtension: configuration.imageExtension,
                             sourceNames: filesToLoad.map((file) => file.name),
-                            headingOffset: configuration.headingOffset,
-                            pitchOffset: configuration.pitchOffset,
-                            rollOffset: configuration.rollOffset,
-                            positionOffset: configuration.positionOffset,
+                            headingOffset: calibration.current.headingOffset,
+                            pitchOffset: calibration.current.pitchOffset,
+                            rollOffset: calibration.current.rollOffset,
+                            positionOffset: calibration.current.positionOffset,
                         },
                     );
 
@@ -264,6 +303,8 @@
                     roadwayNavigator = new Potree.RoadwayNavigator(potreeViewer, roadwayImages, {
                         title: configuration.name || 'Roadway imagery',
                         panorama: configuration.open360 !== false,
+                        defaultCalibration: calibration.defaults,
+                        calibrationStorageKey: calibration.storageKey,
                     });
                 } catch (error) {
                     console.error('Unable to load roadway imagery', error);

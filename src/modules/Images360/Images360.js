@@ -25,6 +25,23 @@ function applyImageTransform(object, image360) {
     object.position.set(...image360.position);
 }
 
+function updateNavigationArrow(arrow, initialPosition, finalPosition) {
+    const initial = initialPosition.clone();
+    const final = finalPosition.clone();
+    initial.z -= 2.5;
+    final.z -= 2.5;
+
+    const direction = final.clone().sub(initial);
+    if (direction.lengthSq() === 0) {
+        arrow.position.copy(initial);
+        arrow.visible = false;
+        return;
+    }
+
+    arrow.position.copy(initial.clone().add(direction.normalize().multiplyScalar(5)));
+    arrow.lookAt(final);
+}
+
 let previousView = {
     controls: null,
     position: null,
@@ -123,6 +140,62 @@ export class Images360 extends EventDispatcher {
         return this._visible;
     }
 
+    getCalibration() {
+        const image = this.images[0];
+        return image ? {
+            headingOffset: image.headingOffset,
+            pitchOffset: image.pitchOffset,
+            rollOffset: image.rollOffset,
+            positionOffset: image.positionOffset.slice(),
+        } : {
+            headingOffset: 0,
+            pitchOffset: 0,
+            rollOffset: 0,
+            positionOffset: [0, 0, 0],
+        };
+    }
+
+    setCalibration(calibration = {}) {
+        if (this.images.length === 0) {
+            return;
+        }
+
+        const previousFocusedPosition = this.focusedImage
+            ? new THREE.Vector3(...this.focusedImage.position)
+            : null;
+        const current = this.getCalibration();
+        const positionOffset = calibration.positionOffset || current.positionOffset;
+        const offset = new THREE.Vector3(
+            Number(positionOffset[0]) || 0,
+            Number(positionOffset[1]) || 0,
+            Number(positionOffset[2]) || 0,
+        );
+
+        for (const image of this.images) {
+            image.headingOffset = Number(calibration.headingOffset ?? current.headingOffset) || 0;
+            image.pitchOffset = Number(calibration.pitchOffset ?? current.pitchOffset) || 0;
+            image.rollOffset = Number(calibration.rollOffset ?? current.rollOffset) || 0;
+            image.positionOffset = offset.toArray();
+
+            const position = image.basePosition.clone().add(offset);
+            image.position = position.toArray();
+            image.currentPosition.copy(position);
+            image.previousPosition.copy(this.images[image.previousIndex].basePosition).add(offset);
+            image.nextPosition.copy(this.images[image.nextIndex].basePosition).add(offset);
+
+            applyImageTransform(image.mesh, image);
+            updateNavigationArrow(image.forwardArrow, image.currentPosition, image.nextPosition);
+            updateNavigationArrow(image.backwardArrow, image.currentPosition, image.previousPosition);
+        }
+
+        if (this.focusedImage) {
+            const positionDelta = new THREE.Vector3(...this.focusedImage.position).sub(previousFocusedPosition);
+            this.viewer.scene.view.position.add(positionDelta);
+            applyImageTransform(this.sphere, this.focusedImage);
+        }
+
+        this.dispatchEvent({ type: 'calibration_changed', calibration: this.getCalibration() });
+    }
     focus(image360, refocus = false) {
         if (!image360) {
             return;
@@ -363,9 +436,6 @@ export class Images360Loader {
         }
 
         function drawNavigationArrow(initialPosition, finalPosition) {
-            let initial = initialPosition.clone();
-            let final = finalPosition.clone();
-
             let radius = 0.5;
             let height = 3.5;
             let geometry = new THREE.ConeGeometry(radius, height, 24);
@@ -374,19 +444,7 @@ export class Images360Loader {
 
             let material = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.75 });
             let arrow = new THREE.Mesh(geometry, material);
-
-            initial.z -= 2.5;
-            final.z -= 2.5;
-
-            let direction = final.clone().sub(initial);
-            if (direction.lengthSq() === 0) {
-                arrow.position.copy(initial);
-                arrow.visible = false;
-                return arrow;
-            }
-
-            arrow.position.copy(initial.clone().add(direction.normalize().multiplyScalar(5)));
-            arrow.lookAt(final);
+            updateNavigationArrow(arrow, initialPosition, finalPosition);
             arrow.visible = false;
             return arrow;
         }
@@ -594,6 +652,8 @@ export class Images360Loader {
             currentPosition.add(positionOffset);
             previousPosition.add(positionOffset);
             nextPosition.add(positionOffset);
+            image360.basePosition = new THREE.Vector3(...currentXY, current.z);
+            image360.positionOffset = positionOffset.toArray();
             image360.currentPosition = currentPosition;
             image360.previousPosition = previousPosition;
             image360.nextPosition = nextPosition;
