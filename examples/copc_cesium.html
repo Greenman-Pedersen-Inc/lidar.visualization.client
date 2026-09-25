@@ -54,6 +54,8 @@
         >
             <label for="copc_file_selector">Point cloud:</label>
             <select id="copc_file_selector"></select>
+            <label id="roadway_selector_control" for="roadway_selector" hidden>Roadway:</label>
+            <select id="roadway_selector" hidden></select>
             <label for="basemap_visible"><input id="basemap_visible" type="checkbox" checked /> Imagery basemap</label>
             <label for="terrain_visible"><input id="terrain_visible" type="checkbox" checked /> v3 terrain</label>
         </div>
@@ -77,7 +79,8 @@
                 document.getElementById('viewer_controls').style.display = 'none';
             }
 
-            const manifestResponse = await fetch('./resources/copc-manifest.json');
+            const manifestUrl = new URL('./resources/copc-manifest.json', window.location.href);
+            const manifestResponse = await fetch(manifestUrl);
             if (!manifestResponse.ok) {
                 throw new Error(`Failed to load COPC manifest: ${manifestResponse.status}`);
             }
@@ -116,14 +119,10 @@
                 window.location.assign(nextUrl);
             });
 
-            const DEFAULT_TERRAIN_URL =
-                'https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/' +
-                'Baker-2021-Route9-North-middle10-20260917-101430/terrain-v3/';
-            const terrainUrl =
-                getQueryParam('terrain') ||
-                getQueryParam('terrain-v3') ||
-                getQueryParam('terrain-v2') ||
-                DEFAULT_TERRAIN_URL;
+            const requestedTerrain = getQueryParam('terrain');
+            const terrainUrl = requestedTerrain === 'none'
+                ? null
+                : requestedTerrain || manifest.terrainUrl;
             const cesiumOptions = {
                 useDefaultRenderLoop: false,
                 animation: false,
@@ -209,6 +208,93 @@
             const requestedVerticalOffset = offsetParameter === null ? Number.NaN : Number(offsetParameter);
             const verticalOffset = Number.isFinite(requestedVerticalOffset) ? requestedVerticalOffset : -33;
             potreeViewer.fitToScreen(0.5);
+
+            const queryRoadwayCsv = getQueryParam('roadwayCsv');
+            const roadwayConfigurations = Array.isArray(manifest.roadwayImagery)
+                ? manifest.roadwayImagery.slice()
+                : [];
+            if (queryRoadwayCsv) {
+                const queryCsvUrl = new URL(queryRoadwayCsv, manifestUrl);
+                roadwayConfigurations.push({
+                    name: getQueryParam('roadwayName') || 'Roadway imagery',
+                    csv: queryCsvUrl.href,
+                    images: getQueryParam('roadwayImages') || new URL('.', queryCsvUrl).href,
+                });
+            }
+
+            const roadwaySelector = document.getElementById('roadway_selector');
+            const roadwaySelectorControl = document.getElementById('roadway_selector_control');
+            let roadwayNavigator = null;
+            let roadwayImages = null;
+
+            function resolveManifestUrl(path) {
+                return new URL(path, manifestUrl).href;
+            }
+
+            async function loadRoadwayImagery(configuration) {
+                roadwaySelector.disabled = true;
+
+                if (roadwayNavigator) {
+                    roadwayNavigator.destroy();
+                    roadwayNavigator = null;
+                }
+                if (roadwayImages) {
+                    potreeViewer.scene.remove360Images(roadwayImages);
+                    roadwayImages.dispose();
+                    roadwayImages = null;
+                }
+
+                try {
+                    const csvUrl = resolveManifestUrl(configuration.csv);
+                    const separator = csvUrl.lastIndexOf('/');
+                    const csvDirectory = csvUrl.slice(0, separator);
+                    const csvFilename = csvUrl.slice(separator + 1);
+                    const imagePath = resolveManifestUrl(configuration.images || csvDirectory).replace(/\/$/, '');
+
+                    roadwayImages = await Potree.Images360Loader.load(
+                        csvDirectory,
+                        csvFilename,
+                        potreeViewer,
+                        {
+                            imagePath,
+                            useCsvOrientation: configuration.useCsvOrientation === true,
+                            elevationScale: configuration.elevationScale,
+                            imageExtension: configuration.imageExtension,
+                            sourceNames: filesToLoad.map((file) => file.name),
+                        },
+                    );
+
+                    if (roadwayImages.images.length === 0) {
+                        throw new Error(`No valid roadway image records were found in ${csvUrl}`);
+                    }
+
+                    potreeViewer.scene.add360Images(roadwayImages);
+                    roadwayNavigator = new Potree.RoadwayNavigator(potreeViewer, roadwayImages, {
+                        title: configuration.name || 'Roadway imagery',
+                        panorama: configuration.open360 !== false,
+                    });
+                } catch (error) {
+                    console.error('Unable to load roadway imagery', error);
+                    potreeViewer.postError(`Unable to load roadway imagery: ${error.message}`);
+                } finally {
+                    roadwaySelector.disabled = false;
+                }
+            }
+
+            if (roadwayConfigurations.length > 0) {
+                roadwaySelector.hidden = false;
+                roadwaySelectorControl.hidden = false;
+                roadwayConfigurations.forEach((configuration, index) => {
+                    const option = document.createElement('option');
+                    option.value = String(index);
+                    option.textContent = configuration.name || `Roadway ${index + 1}`;
+                    roadwaySelector.appendChild(option);
+                });
+                roadwaySelector.addEventListener('change', () => {
+                    loadRoadwayImagery(roadwayConfigurations[Number(roadwaySelector.value)]);
+                });
+                await loadRoadwayImagery(roadwayConfigurations[0]);
+            }
 
             function toCesium(position) {
                 const [longitude, latitude] = toMap.forward([position.x, position.y]);

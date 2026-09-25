@@ -1,5 +1,16 @@
 {
     "baseUrl": "https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/lidar/",
+    "terrainUrl": "https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/terrain-v3/",
+    "roadwayImagery": [
+        {
+            "name": "Route 9 North",
+            "csv": "https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/photo_points/00000009__north_selected_image_points.csv",
+            "images": "https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/panoramic_photos/",
+            "elevationScale": 1,
+            "useCsvOrientation": true,
+            "open360": true
+        }
+    ],
     "files": [
         {
             "name": "0009__N_111.93",

@@ -753,3 +753,84 @@ body {
     padding-top: 0.6em;
     padding-bottom: 0.1em;
 }
+.potree-roadway-navigator {
+	position: absolute;
+	left: 50%;
+	bottom: 18px;
+	z-index: 1001;
+	box-sizing: border-box;
+	width: min(680px, calc(100% - 32px));
+	padding: 12px 14px;
+	transform: translateX(-50%);
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	border-radius: 8px;
+	color: #f5f7fa;
+	background: rgba(18, 24, 31, 0.9);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+	font: 13px/1.35 sans-serif;
+	backdrop-filter: blur(4px);
+}
+
+.potree-roadway-navigator__heading,
+.potree-roadway-navigator__controls {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.potree-roadway-navigator__heading {
+	justify-content: space-between;
+	margin-bottom: 8px;
+}
+
+.potree-roadway-navigator__heading span {
+	overflow: hidden;
+	color: #c7d0da;
+	font-size: 11px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.potree-roadway-navigator__controls input[type='range'] {
+	min-width: 0;
+	flex: 1;
+	accent-color: #49b9f2;
+}
+
+.potree-roadway-navigator__controls button {
+	width: 34px;
+	height: 30px;
+	padding: 0;
+	border: 1px solid #718092;
+	border-radius: 4px;
+	color: white;
+	background: #344150;
+	cursor: pointer;
+	font-size: 24px;
+	line-height: 24px;
+}
+
+.potree-roadway-navigator__controls button:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.potree-roadway-navigator__mode {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-top: 8px;
+	cursor: pointer;
+}
+
+.potree-roadway-navigator[hidden] {
+	display: none;
+}
+
+@media (max-width: 640px) {
+	.potree-roadway-navigator__heading {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 2px;
+	}
+}
