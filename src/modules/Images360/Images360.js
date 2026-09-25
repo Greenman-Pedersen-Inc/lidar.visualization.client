@@ -11,6 +11,20 @@ let smHovered = new THREE.MeshBasicMaterial({ side: THREE.BackSide, color: 0xff0
 let raycaster = new THREE.Raycaster();
 let currentlyHovered = null;
 
+function applyImageTransform(object, image360) {
+    const yaw = image360.orientationMode === 'absolute'
+        ? image360.course
+        : -image360.course + 90;
+
+    object.rotation.set(
+        THREE.Math.degToRad(image360.roll + 90 + image360.rollOffset),
+        THREE.Math.degToRad(-image360.pitch + image360.pitchOffset),
+        THREE.Math.degToRad(yaw + image360.headingOffset),
+        'ZYX',
+    );
+    object.position.set(...image360.position);
+}
+
 let previousView = {
     controls: null,
     position: null,
@@ -28,6 +42,10 @@ class Image360 {
         this.pitch = pitch;
         this.roll = roll;
         this.mesh = null;
+        this.orientationMode = 'legacy';
+        this.headingOffset = 0;
+        this.pitchOffset = 0;
+        this.rollOffset = 0;
     }
 }
 
@@ -64,12 +82,7 @@ export class Images360 extends EventDispatcher {
         let elUnfocus = document.createElement('input');
         elUnfocus.className = 'unfocus-button'
         elUnfocus.type = 'button';
-        elUnfocus.value = 'unfocus';
-        elUnfocus.style.position = 'absolute';
-        elUnfocus.style.right = '10px';
-        elUnfocus.style.bottom = '10px';
-        elUnfocus.style.zIndex = '10000';
-        elUnfocus.style.fontSize = '2em';
+        elUnfocus.value = 'Exit 360°';
         elUnfocus.addEventListener('click', () => this.unfocus());
         this.elUnfocus = elUnfocus;
 
@@ -163,14 +176,7 @@ export class Images360 extends EventDispatcher {
         }).catch((error) => {
             console.error(`Unable to load 360 image: ${image360.file}`, error);
         });
-
-        {
-            // orientation
-            let { course, pitch, roll } = image360;
-            this.sphere.rotation.set(THREE.Math.degToRad(+roll + 90), THREE.Math.degToRad(-pitch), THREE.Math.degToRad(-course + 90), 'ZYX');
-        }
-
-        this.sphere.position.set(...image360.position);
+        applyImageTransform(this.sphere, image360);
 
         let target = new THREE.Vector3(...image360.position);
         let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
@@ -575,12 +581,25 @@ export class Images360Loader {
 
             image360.index = i;
             image360.distance = distance;
+            image360.orientationMode = params.useCsvOrientation ? 'absolute' : 'legacy';
+            image360.headingOffset = Number(params.headingOffset) || 0;
+            image360.pitchOffset = Number(params.pitchOffset) || 0;
+            image360.rollOffset = Number(params.rollOffset) || 0;
+            const offset = params.positionOffset || [];
+            const positionOffset = new THREE.Vector3(
+                Number(offset[0]) || 0,
+                Number(offset[1]) || 0,
+                Number(offset[2]) || 0,
+            );
+            currentPosition.add(positionOffset);
+            previousPosition.add(positionOffset);
+            nextPosition.add(positionOffset);
             image360.currentPosition = currentPosition;
             image360.previousPosition = previousPosition;
             image360.nextPosition = nextPosition;
             image360.previousIndex = Math.max(0, i - 1);
             image360.nextIndex = Math.min(recordsInBounds.length - 1, i + 1);
-            image360.position = [...currentXY, current.z];
+            image360.position = currentPosition.toArray();
 
             drawNavigationArrows(image360);
             images360.images.push(image360);
@@ -593,21 +612,13 @@ export class Images360Loader {
 
     static createSceneNodes(images360, transform) {
         for (let image360 of images360.images) {
-            let { longitude, latitude, altitude } = image360;
-            let xy = transform.forward([longitude, latitude]);
-
             let mesh = new THREE.Mesh(sg, sm);
-            mesh.position.set(...xy, altitude);
             mesh.scale.set(3, 3, 3);
             mesh.material.transparent = true;
             mesh.material.opacity = 0.75;
             mesh.image360 = image360;
 
-            {
-                // orientation
-                var { course, pitch, roll } = image360;
-                mesh.rotation.set(THREE.Math.degToRad(+roll + 90), THREE.Math.degToRad(-pitch), THREE.Math.degToRad(-course + 90), 'ZYX');
-            }
+            applyImageTransform(mesh, image360);
 
             images360.node.add(mesh);
 

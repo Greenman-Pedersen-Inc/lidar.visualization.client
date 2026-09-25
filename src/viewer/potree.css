@@ -827,7 +827,84 @@ body {
 	display: none;
 }
 
+.potree-roadway-toolbar {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	z-index: 1001;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	box-sizing: border-box;
+	max-width: calc(100% - 70px);
+	padding: 10px 12px;
+	border: 1px solid rgba(255, 255, 255, 0.28);
+	border-radius: 8px;
+	color: #f5f7fa;
+	background: rgba(18, 24, 31, 0.9);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+	font: 13px/1.35 sans-serif;
+	backdrop-filter: blur(4px);
+}
+
+.potree-roadway-toolbar label {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+}
+
+.potree-roadway-toolbar select {
+	min-width: 130px;
+	height: 30px;
+	padding: 0 28px 0 9px;
+	border: 1px solid #718092;
+	border-radius: 4px;
+	color: #f5f7fa;
+	background-color: #344150;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+	color-scheme: dark;
+	cursor: pointer;
+}
+
+.potree-roadway-toolbar input[type='checkbox'],
+.potree-roadway-navigator input[type='checkbox'] {
+	accent-color: #49b9f2;
+}
+
+.unfocus-button {
+	position: absolute;
+	right: 18px;
+	bottom: 18px;
+	z-index: 1002;
+	height: 38px;
+	padding: 0 14px;
+	border: 1px solid #718092;
+	border-radius: 6px;
+	color: #f5f7fa;
+	background: rgba(18, 24, 31, 0.94);
+	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+	font: 600 13px/1 sans-serif;
+	backdrop-filter: blur(4px);
+	cursor: pointer;
+}
+
+.unfocus-button:hover,
+.potree-roadway-navigator__controls button:hover:not(:disabled),
+.potree-roadway-toolbar select:hover {
+	border-color: #49b9f2;
+	background-color: #3d4d5f;
+}
+
 @media (max-width: 640px) {
+	.potree-roadway-toolbar {
+		left: 70px;
+		right: 10px;
+		max-width: none;
+		align-items: stretch;
+		flex-wrap: wrap;
+	}
+
 	.potree-roadway-navigator__heading {
 		align-items: flex-start;
 		flex-direction: column;

@@ -38,19 +38,7 @@
 
         <div
             id="viewer_controls"
-            style="
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                z-index: 1000;
-                display: flex;
-                gap: 12px;
-                align-items: center;
-                padding: 8px 10px;
-                border-radius: 4px;
-                color: white;
-                background: rgba(0, 0, 0, 0.7);
-            "
+            class="potree-roadway-toolbar"
         >
             <label for="copc_file_selector">Point cloud:</label>
             <select id="copc_file_selector"></select>
@@ -261,6 +249,10 @@
                             elevationScale: configuration.elevationScale,
                             imageExtension: configuration.imageExtension,
                             sourceNames: filesToLoad.map((file) => file.name),
+                            headingOffset: configuration.headingOffset,
+                            pitchOffset: configuration.pitchOffset,
+                            rollOffset: configuration.rollOffset,
+                            positionOffset: configuration.positionOffset,
                         },
                     );
 
