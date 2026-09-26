@@ -188,7 +188,7 @@ export class Images360 extends EventDispatcher {
 
         this.dispatchEvent({ type: 'calibration_changed', calibration: this.getCalibration() });
     }
-    focus(image360, refocus = false) {
+    focus(image360, refocus = false, viewDirectionTarget = null) {
         if (!image360) {
             return;
         }
@@ -244,10 +244,15 @@ export class Images360 extends EventDispatcher {
         applyImageTransform(this.sphere, image360);
 
         let target = new THREE.Vector3(...image360.position);
-        let dir = target.clone().sub(this.viewer.scene.view.position).normalize();
+        let dir = viewDirectionTarget
+            ? new THREE.Vector3(...viewDirectionTarget).sub(target)
+            : target.clone().sub(this.viewer.scene.view.position);
+        if (dir.lengthSq() === 0) {
+            dir.set(0, 1, 0);
+        }
+        dir.normalize();
         let move = dir.multiplyScalar(0.000001);
         let newCamPos = target.clone().sub(move);
-
         this.viewer.scene.view.setView(newCamPos, target, 500);
         window.addEventListener('click', this.arrowHoverIntersect);
 
@@ -290,9 +295,9 @@ export class Images360 extends EventDispatcher {
         }
     }
 
-    refocus(image360) {
+    refocus(image360, viewDirectionTarget = null) {
         this.unfocus({ restoreView: false });
-        this.focus(image360, true);
+        this.focus(image360, true, viewDirectionTarget);
     }
 
     unfocus(options = {}) {

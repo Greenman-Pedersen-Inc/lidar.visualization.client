@@ -185,7 +185,8 @@ export class RoadwayNavigator {
                 const target = view.getPivot();
                 const direction = target.clone().sub(view.position).normalize();
                 this.images360.unfocus({ restoreView: false });
-                const cameraPosition = target.clone().addScaledVector(direction, -12);
+                const cameraPosition = target.clone().addScaledVector(direction, -20);
+                cameraPosition.z += 20;
                 view.setView(cameraPosition, target, 250);
             }
         } else {
@@ -264,10 +265,13 @@ export class RoadwayNavigator {
 
         if (this.panoramaInput.checked) {
             this.images360.visible = true;
+            const neighbor = this.images360.images[
+                image.nextIndex === image.index ? image.previousIndex : image.nextIndex
+            ];
             if (this.images360.focusedImage) {
-                this.images360.refocus(image);
+                this.images360.refocus(image, neighbor.position);
             } else {
-                this.images360.focus(image);
+                this.images360.focus(image, false, neighbor.position);
             }
             return;
         }
