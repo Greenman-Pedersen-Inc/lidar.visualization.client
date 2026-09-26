@@ -38,8 +38,9 @@ function updateNavigationArrow(arrow, initialPosition, finalPosition) {
         return;
     }
 
-    arrow.position.copy(initial.clone().add(direction.normalize().multiplyScalar(5)));
-    arrow.lookAt(final);
+    const arrowDirection = direction.normalize();
+    arrow.position.copy(initial.clone().add(arrowDirection.clone().multiplyScalar(12)));
+    arrow.lookAt(arrow.position.clone().add(arrowDirection));
 }
 
 let previousView = {
@@ -673,7 +674,7 @@ export class Images360Loader {
     static createSceneNodes(images360, transform) {
         for (let image360 of images360.images) {
             let mesh = new THREE.Mesh(sg, sm);
-            mesh.scale.set(3, 3, 3);
+            mesh.scale.set(2, 2, 2);
             mesh.material.transparent = true;
             mesh.material.opacity = 0.75;
             mesh.image360 = image360;

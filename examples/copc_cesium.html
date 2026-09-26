@@ -44,9 +44,8 @@
             <select id="copc_file_selector"></select>
             <label id="roadway_selector_control" for="roadway_selector" hidden>Roadway:</label>
             <select id="roadway_selector" hidden></select>
-            <label for="pointcloud_visible"><input id="pointcloud_visible" type="checkbox" checked /> Point cloud</label>
-            <label for="basemap_visible"><input id="basemap_visible" type="checkbox" checked /> Imagery basemap</label>
-            <label for="terrain_visible"><input id="terrain_visible" type="checkbox" checked /> v3 terrain</label>
+            <label id="pointcloud_visibility_control" for="pointcloud_visible" hidden><input id="pointcloud_visible" type="checkbox" checked /> Point cloud</label>
+            <label id="environment_visibility_control" for="environment_visible" hidden><input id="environment_visible" type="checkbox" checked /> Basemap &amp; terrain</label>
         </div>
 
         <script type="module">
@@ -142,24 +141,19 @@
                 cesiumOptions.terrainProvider = terrainProvider;
             }
             window.cesiumViewer = new Cesium.Viewer('cesium_container', cesiumOptions);
-            const basemapVisibleInput = document.getElementById('basemap_visible');
-            function setBasemapVisibility(visible) {
+            const environmentVisibleInput = document.getElementById('environment_visible');
+            function setEnvironmentVisibility(visible) {
                 for (let index = 0; index < cesiumViewer.imageryLayers.length; index++) {
                     cesiumViewer.imageryLayers.get(index).show = visible;
                 }
                 cesiumViewer.scene.globe.baseColor = visible
                     ? Cesium.Color.WHITE
                     : Cesium.Color.fromCssColorString('#9ca4ab');
+                cesiumViewer.terrainProvider = visible && terrainProvider
+                    ? terrainProvider
+                    : new Cesium.EllipsoidTerrainProvider();
             }
-            basemapVisibleInput.addEventListener('change', () => setBasemapVisibility(basemapVisibleInput.checked));
-            const terrainVisibleInput = document.getElementById('terrain_visible');
-            terrainVisibleInput.disabled = !terrainProvider;
-            terrainVisibleInput.addEventListener('change', () => {
-                cesiumViewer.terrainProvider =
-                    terrainVisibleInput.checked && terrainProvider
-                        ? terrainProvider
-                        : new Cesium.EllipsoidTerrainProvider();
-            });
+            environmentVisibleInput.addEventListener('change', () => setEnvironmentVisibility(environmentVisibleInput.checked));
 
             window.potreeViewer = new Potree.Viewer(document.getElementById('potree_render_area'), {
                 useDefaultRenderLoop: false,
@@ -305,6 +299,10 @@
                         panorama: configuration.open360 !== false,
                         defaultCalibration: calibration.defaults,
                         calibrationStorageKey: calibration.storageKey,
+                        visibilityControls: [
+                            document.getElementById('pointcloud_visibility_control'),
+                            document.getElementById('environment_visibility_control'),
+                        ],
                     });
                 } catch (error) {
                     console.error('Unable to load roadway imagery', error);

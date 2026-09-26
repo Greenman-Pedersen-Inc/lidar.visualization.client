@@ -822,6 +822,22 @@ body {
 	cursor: pointer;
 }
 
+.potree-roadway-navigator__modes {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+
+.potree-roadway-navigator__modes label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
 .potree-roadway-navigator__footer {
 	display: flex;
 	align-items: center;

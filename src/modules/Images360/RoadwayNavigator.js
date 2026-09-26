@@ -50,13 +50,24 @@ export class RoadwayNavigator {
         this.panoramaInput.checked = options.panorama !== false;
         mode.append(this.panoramaInput, document.createTextNode(' Open 360° imagery'));
 
+        const modes = document.createElement('div');
+        modes.className = 'potree-roadway-navigator__modes';
+        this.externalControls = (options.visibilityControls || [])
+            .filter((control) => control)
+            .map((control) => ({ control, parent: control.parentElement }));
+        for (const { control } of this.externalControls) {
+            control.hidden = false;
+            modes.appendChild(control);
+        }
+        modes.appendChild(mode);
+
         this.alignmentButton = this.createButton('Fine-tune panorama alignment', 'Align');
         this.alignmentButton.className = 'potree-roadway-navigator__align-button';
         this.alignmentButton.setAttribute('aria-expanded', 'false');
 
         const footer = document.createElement('div');
         footer.className = 'potree-roadway-navigator__footer';
-        footer.append(mode, this.alignmentButton);
+        footer.append(modes, this.alignmentButton);
 
         this.alignmentPanel = document.createElement('div');
         this.alignmentPanel.className = 'potree-roadway-navigator__alignment';
@@ -236,6 +247,10 @@ export class RoadwayNavigator {
     destroy() {
         window.clearTimeout(this.changeTimer);
         this.images360.removeEventListener('focus', this.onImageFocus);
+        for (const { control, parent } of this.externalControls) {
+            control.hidden = true;
+            parent.appendChild(control);
+        }
         this.element.remove();
     }
 }
