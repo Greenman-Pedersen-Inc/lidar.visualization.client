@@ -11,13 +11,18 @@ export class RoadwayNavigator {
         this.options = options;
         this.index = 0;
         this.changeTimer = null;
+        this.freeNavigation = false;
         this.defaultCalibration = options.defaultCalibration || {
             headingOffset: 0,
             pitchOffset: 0,
             rollOffset: 0,
             positionOffset: [0, 0, 0],
         };
-        this.onImageFocus = (event) => this.setIndex(event.image.index, false);
+        this.onImageFocus = (event) => {
+            this.setIndex(event.image.index, false);
+            this.freeNavigation = false;
+            this.updateNavigationModeButton();
+        };
 
         this.element = document.createElement('section');
         this.element.className = 'potree-roadway-navigator';
@@ -121,6 +126,12 @@ export class RoadwayNavigator {
         const container = options.container || viewer.renderer.domElement.parentElement;
         container.appendChild(this.element);
 
+        this.navigationModeButton = document.createElement('button');
+        this.navigationModeButton.type = 'button';
+        this.navigationModeButton.className = 'potree-roadway-navigation-toggle';
+        this.navigationModeButton.hidden = true;
+        container.appendChild(this.navigationModeButton);
+
         this.previousButton.addEventListener('click', () => this.move(-1));
         this.nextButton.addEventListener('click', () => this.move(1));
         this.range.addEventListener('input', () => {
@@ -130,12 +141,9 @@ export class RoadwayNavigator {
         });
         this.range.addEventListener('change', () => this.navigate());
         this.panoramaInput.addEventListener('change', () => {
-            if (!this.panoramaInput.checked && this.images360.focusedImage) {
-                this.images360.unfocus({ restoreView: false });
-                return;
-            }
-            this.navigate();
+            this.images360.visible = this.panoramaInput.checked;
         });
+        this.navigationModeButton.addEventListener('click', () => this.toggleFreeNavigation());
         this.alignmentButton.addEventListener('click', () => {
             this.alignmentPanel.hidden = !this.alignmentPanel.hidden;
             this.alignmentButton.setAttribute('aria-expanded', String(!this.alignmentPanel.hidden));
@@ -153,6 +161,35 @@ export class RoadwayNavigator {
         button.setAttribute('aria-label', label);
         button.textContent = text;
         return button;
+    }
+
+    updateNavigationModeButton() {
+        if (!this.navigationModeButton) {
+            return;
+        }
+        this.navigationModeButton.hidden = false;
+        this.navigationModeButton.textContent = this.freeNavigation ? 'Video Log' : 'Free LiDAR';
+        this.navigationModeButton.title = this.freeNavigation
+            ? 'Return to the selected Video Log panorama'
+            : 'Exit the panorama for unrestricted LiDAR navigation';
+    }
+
+    toggleFreeNavigation() {
+        this.freeNavigation = !this.freeNavigation;
+
+        if (this.freeNavigation) {
+            this.panoramaInput.checked = false;
+            this.images360.visible = false;
+            if (this.images360.focusedImage) {
+                this.images360.unfocus({ restoreView: false });
+            }
+        } else {
+            this.panoramaInput.checked = true;
+            this.images360.visible = true;
+            this.images360.focus(this.images360.images[this.index]);
+        }
+
+        this.updateNavigationModeButton();
     }
 
     applyCalibration() {
@@ -221,6 +258,7 @@ export class RoadwayNavigator {
         const image = this.images360.images[this.index];
 
         if (this.panoramaInput.checked) {
+            this.images360.visible = true;
             if (this.images360.focusedImage) {
                 this.images360.refocus(image);
             } else {
@@ -232,6 +270,9 @@ export class RoadwayNavigator {
         if (this.images360.focusedImage) {
             this.images360.unfocus({ restoreView: false });
         }
+
+        this.freeNavigation = true;
+        this.updateNavigationModeButton();
 
         const current = new THREE.Vector3(...image.position);
         const neighbor = this.images360.images[image.nextIndex === image.index ? image.previousIndex : image.nextIndex];
@@ -257,6 +298,7 @@ export class RoadwayNavigator {
             control.hidden = true;
             parent.appendChild(control);
         }
+        this.navigationModeButton.remove();
         this.element.remove();
     }
 }

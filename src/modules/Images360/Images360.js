@@ -116,6 +116,8 @@ export class Images360 extends EventDispatcher {
 
         for (const image of this.images) {
             image.mesh.visible = this.showMarkers && visible && this.focusedImage == null;
+            image.forwardArrow.visible = visible && this.focusedImage === image && image.nextIndex !== image.index;
+            image.backwardArrow.visible = visible && this.focusedImage === image && image.previousIndex !== image.index;
         }
 
         this.sphere.visible = visible && this.focusedImage != null;
