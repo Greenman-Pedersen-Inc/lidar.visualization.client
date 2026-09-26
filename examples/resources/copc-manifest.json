@@ -8,6 +8,7 @@
             "images": "https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/panoramic_photos/",
             "elevationScale": 1,
             "useCsvOrientation": true,
+            "showMarkers": false,
             "headingOffset": 0,
             "pitchOffset": 0,
             "rollOffset": 0,

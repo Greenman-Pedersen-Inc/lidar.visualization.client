@@ -129,7 +129,13 @@ export class RoadwayNavigator {
             this.changeTimer = window.setTimeout(() => this.navigate(), 120);
         });
         this.range.addEventListener('change', () => this.navigate());
-        this.panoramaInput.addEventListener('change', () => this.navigate());
+        this.panoramaInput.addEventListener('change', () => {
+            if (!this.panoramaInput.checked && this.images360.focusedImage) {
+                this.images360.unfocus({ restoreView: false });
+                return;
+            }
+            this.navigate();
+        });
         this.alignmentButton.addEventListener('click', () => {
             this.alignmentPanel.hidden = !this.alignmentPanel.hidden;
             this.alignmentButton.setAttribute('aria-expanded', String(!this.alignmentPanel.hidden));

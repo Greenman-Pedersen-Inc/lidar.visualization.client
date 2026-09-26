@@ -95,19 +95,8 @@ export class Images360 extends EventDispatcher {
         this.focusedImage = null;
         this.loadToken = 0;
         this.textureCache = [];
+        this.showMarkers = true;
         this.arrowHoverIntersect = this.arrowHoverIntersect.bind(this);
-
-        let elUnfocus = document.createElement('input');
-        elUnfocus.className = 'unfocus-button'
-        elUnfocus.type = 'button';
-        elUnfocus.value = 'Exit 360°';
-        elUnfocus.addEventListener('click', () => this.unfocus());
-        this.elUnfocus = elUnfocus;
-
-        this.domRoot = viewer.renderer.domElement.parentElement;
-        this.domRoot.appendChild(elUnfocus);
-        this.elUnfocus.style.display = 'none';
-
         this.onViewerUpdate = () => this.update();
         viewer.addEventListener('update', this.onViewerUpdate);
         viewer.inputHandler.addInputListener(this);
@@ -126,7 +115,7 @@ export class Images360 extends EventDispatcher {
         }
 
         for (const image of this.images) {
-            image.mesh.visible = visible && this.focusedImage == null;
+            image.mesh.visible = this.showMarkers && visible && this.focusedImage == null;
         }
 
         this.sphere.visible = visible && this.focusedImage != null;
@@ -262,7 +251,6 @@ export class Images360 extends EventDispatcher {
 
         this.focusedImage = image360;
 
-        this.elUnfocus.style.display = '';
         this.dispatchEvent({ type: 'focus', image: image360 });
     }
 
@@ -313,7 +301,7 @@ export class Images360 extends EventDispatcher {
         this.selectingEnabled = true;
 
         for (let image of this.images) {
-            image.mesh.visible = true;
+            image.mesh.visible = this.showMarkers;
             image.forwardArrow.visible = false;
             image.backwardArrow.visible = false;
         }
@@ -336,7 +324,6 @@ export class Images360 extends EventDispatcher {
 
         this.focusedImage = null;
 
-        this.elUnfocus.style.display = 'none';
         this.dispatchEvent({ type: 'unfocus', image: image });
     }
 
@@ -345,8 +332,6 @@ export class Images360 extends EventDispatcher {
         this.viewer.removeEventListener('update', this.onViewerUpdate);
         this.viewer.inputHandler.removeInputListener(this);
         this.removeEventListener('mousedown', this.onMouseDown);
-        this.elUnfocus.remove();
-
         for (const image of this.images) {
             if (image.texture) {
                 image.texture.dispose();
@@ -604,6 +589,7 @@ export class Images360Loader {
         ) : recordsForSources;
 
         const images360 = new Images360(viewer);
+        images360.showMarkers = params.showMarkers !== false;
         const imagePath = params.imagePath || imageryPath;
         let distance = 0;
 
@@ -675,6 +661,7 @@ export class Images360Loader {
         for (let image360 of images360.images) {
             let mesh = new THREE.Mesh(sg, sm);
             mesh.scale.set(2, 2, 2);
+            mesh.visible = images360.showMarkers;
             mesh.material.transparent = true;
             mesh.material.opacity = 0.75;
             mesh.image360 = image360;

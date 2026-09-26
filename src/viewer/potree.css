@@ -943,24 +943,6 @@ body {
 	accent-color: #49b9f2;
 }
 
-.unfocus-button {
-	position: absolute;
-	right: 18px;
-	bottom: 18px;
-	z-index: 1002;
-	height: 38px;
-	padding: 0 14px;
-	border: 1px solid #718092;
-	border-radius: 6px;
-	color: #f5f7fa;
-	background: rgba(18, 24, 31, 0.94);
-	box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-	font: 600 13px/1 sans-serif;
-	backdrop-filter: blur(4px);
-	cursor: pointer;
-}
-
-.unfocus-button:hover,
 .potree-roadway-navigator__controls button:hover:not(:disabled),
 .potree-roadway-navigator__align-button:hover,
 .potree-roadway-navigator__reset-button:hover,
