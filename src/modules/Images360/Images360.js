@@ -317,8 +317,10 @@ export class Images360 extends EventDispatcher {
         this.sphere.visible = false;
 
         this.viewer.orbitControls.doubleClockZoomEnabled = true;
-        if (restoreView && previousView.controls && previousView.position && previousView.target) {
+        if (previousView.controls) {
             this.viewer.setControls(previousView.controls);
+        }
+        if (restoreView && previousView.position && previousView.target) {
             this.viewer.scene.view.setView(previousView.position, previousView.target, 500);
         }
 
