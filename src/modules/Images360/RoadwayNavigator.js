@@ -181,7 +181,12 @@ export class RoadwayNavigator {
             this.panoramaInput.checked = false;
             this.images360.visible = false;
             if (this.images360.focusedImage) {
+                const view = this.viewer.scene.view;
+                const target = view.getPivot();
+                const direction = target.clone().sub(view.position).normalize();
                 this.images360.unfocus({ restoreView: false });
+                const cameraPosition = target.clone().addScaledVector(direction, -12);
+                view.setView(cameraPosition, target, 250);
             }
         } else {
             this.panoramaInput.checked = true;
