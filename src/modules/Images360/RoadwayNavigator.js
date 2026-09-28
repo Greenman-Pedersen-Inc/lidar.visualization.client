@@ -11,7 +11,8 @@ export class RoadwayNavigator {
         this.options = options;
         this.index = 0;
         this.changeTimer = null;
-        this.freeNavigation = false;
+        this.freeNavigation = options.panorama === false;
+        this.environmentInput = options.environmentInput || null;
         this.defaultCalibration = options.defaultCalibration || {
             headingOffset: 0,
             pitchOffset: 0,
@@ -20,8 +21,9 @@ export class RoadwayNavigator {
         };
         this.onImageFocus = (event) => {
             this.setIndex(event.image.index, false);
-            this.freeNavigation = false;
-            this.updateNavigationModeButton();
+            this.panoramaInput.checked = true;
+            this.images360.visible = true;
+            this.setNavigationMode(false);
         };
 
         this.element = document.createElement('section');
@@ -152,6 +154,8 @@ export class RoadwayNavigator {
         images360.addEventListener('focus', this.onImageFocus);
 
         this.setIndex(options.index || 0, false);
+        this.images360.visible = this.panoramaInput.checked;
+        this.setNavigationMode(this.freeNavigation);
     }
 
     createButton(label, text) {
@@ -174,10 +178,21 @@ export class RoadwayNavigator {
             : 'Exit the panorama for unrestricted LiDAR navigation';
     }
 
-    toggleFreeNavigation() {
-        this.freeNavigation = !this.freeNavigation;
+    setNavigationMode(freeNavigation) {
+        this.freeNavigation = freeNavigation;
+        if (this.environmentInput) {
+            this.environmentInput.disabled = !freeNavigation;
+            this.environmentInput.checked = freeNavigation;
+            this.environmentInput.closest('label')?.classList.toggle('is-disabled', !freeNavigation);
+            this.environmentInput.dispatchEvent(new Event('change'));
+        }
+        this.updateNavigationModeButton();
+    }
 
-        if (this.freeNavigation) {
+    toggleFreeNavigation() {
+        const freeNavigation = !this.freeNavigation;
+
+        if (freeNavigation) {
             this.panoramaInput.checked = false;
             this.images360.visible = false;
             if (this.images360.focusedImage) {
@@ -195,7 +210,7 @@ export class RoadwayNavigator {
             this.images360.focus(this.images360.images[this.index]);
         }
 
-        this.updateNavigationModeButton();
+        this.setNavigationMode(freeNavigation);
     }
 
     applyCalibration() {
@@ -264,6 +279,7 @@ export class RoadwayNavigator {
         const image = this.images360.images[this.index];
 
         if (this.panoramaInput.checked) {
+            this.setNavigationMode(false);
             this.images360.visible = true;
             const neighbor = this.images360.images[
                 image.nextIndex === image.index ? image.previousIndex : image.nextIndex
@@ -280,8 +296,7 @@ export class RoadwayNavigator {
             this.images360.unfocus({ restoreView: false });
         }
 
-        this.freeNavigation = true;
-        this.updateNavigationModeButton();
+        this.setNavigationMode(true);
 
         const current = new THREE.Vector3(...image.position);
         const neighbor = this.images360.images[image.nextIndex === image.index ? image.previousIndex : image.nextIndex];

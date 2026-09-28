@@ -838,6 +838,11 @@ body {
 	cursor: pointer;
 }
 
+.potree-roadway-navigator__modes label.is-disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
 .potree-roadway-navigator__footer {
 	display: flex;
 	align-items: center;
