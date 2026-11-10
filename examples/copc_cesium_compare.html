@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>COPC Terrain Comparison</title>
+        <style>
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                overflow: hidden;
+                color: white;
+                background: #151a21;
+                font: 14px/1.35 system-ui, sans-serif;
+            }
+
+            header {
+                box-sizing: border-box;
+                height: 46px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 20px;
+                padding: 0 14px;
+                background: #111820;
+                border-bottom: 1px solid #4b5664;
+            }
+
+            header span {
+                color: #bbc5d1;
+                font-size: 12px;
+            }
+
+            .inspection-controls {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                color: #dce4ed;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+
+            .inspection-controls label {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .inspection-controls a {
+                color: #75ceff;
+            }
+
+            #comparison {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                height: calc(100% - 46px);
+            }
+
+            .pane {
+                position: relative;
+                min-width: 0;
+                overflow: hidden;
+            }
+
+            .pane + .pane {
+                border-left: 2px solid #f4f6f8;
+            }
+
+            iframe {
+                width: 100%;
+                height: 100%;
+                border: 0;
+            }
+
+            .label {
+                position: absolute;
+                top: 10px;
+                left: 50%;
+                z-index: 10;
+                transform: translateX(-50%);
+                padding: 6px 12px;
+                border: 1px solid rgba(255, 255, 255, 0.65);
+                border-radius: 4px;
+                background: rgba(0, 0, 0, 0.72);
+                pointer-events: none;
+                font-weight: 700;
+                white-space: nowrap;
+            }
+
+            .pane.active .label {
+                border-color: #64c8ff;
+                box-shadow: 0 0 0 1px #64c8ff inset;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <strong>Terrain comparison</strong>
+            <span>Move in either pane; the other view follows. Each pane uses a 2.5M point budget.</span>
+            <div class="inspection-controls">
+                <label><input id="terrain_only" type="checkbox" /> Terrain only</label>
+                <a id="exaggeration_link" href="#">3× terrain</a>
+            </div>
+        </header>
+        <main id="comparison">
+            <section class="pane active" id="v2_pane">
+                <div class="label">COPC + ellipsoid</div>
+                <iframe id="v2" title="COPC without custom terrain"></iframe>
+            </section>
+            <section class="pane" id="v3_pane">
+                <div class="label">COPC + v3 terrain</div>
+                <iframe id="v3" title="Terrain version 3"></iframe>
+            </section>
+        </main>
+
+        <script>
+            const TERRAIN_ROOT =
+                'https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/' +
+                'Baker-2021-Route9-North-middle10-20260917-101430/';
+            const params = new URLSearchParams(window.location.search);
+            const comparisonBudget = params.get('budget') || '2500000';
+            const verticalOffset = params.get('offset') || '-33';
+            const terrainExaggeration = params.get('exaggeration') || '1';
+            const terrainOnlyInput = document.getElementById('terrain_only');
+            terrainOnlyInput.checked = params.get('terrainOnly') === '1';
+
+            function viewerUrl(terrainUrl) {
+                const url = new URL('./copc_cesium.html', window.location.href);
+                url.searchParams.set('terrain', terrainUrl);
+                url.searchParams.set('embed', '1');
+                url.searchParams.set('budget', comparisonBudget);
+                url.searchParams.set('offset', verticalOffset);
+                url.searchParams.set('exaggeration', terrainExaggeration);
+                for (const name of ['r', 'c']) {
+                    if (params.has(name)) url.searchParams.set(name, params.get(name));
+                }
+                return url.href;
+            }
+
+            const v2Frame = document.getElementById('v2');
+            const v3Frame = document.getElementById('v3');
+            v2Frame.src = viewerUrl('none');
+            v3Frame.src = viewerUrl(params.get('v3') || `${TERRAIN_ROOT}terrain-v3/`);
+
+            let leader = v2Frame;
+            const frames = [v2Frame, v3Frame];
+            for (const frame of frames) {
+                frame.addEventListener('mouseenter', () => {
+                    leader = frame;
+                    document.querySelectorAll('.pane').forEach((pane) => pane.classList.remove('active'));
+                    frame.parentElement.classList.add('active');
+                });
+            }
+
+            function updateExaggerationLink() {
+                const link = document.getElementById('exaggeration_link');
+                const nextUrl = new URL(window.location.href);
+                const exaggerated = Number(terrainExaggeration) > 1;
+                nextUrl.searchParams.set('exaggeration', exaggerated ? '1' : '3');
+                if (!exaggerated) nextUrl.searchParams.set('terrainOnly', '1');
+                link.href = nextUrl.href;
+                link.textContent = exaggerated ? '1× terrain' : '3× terrain';
+            }
+
+            updateExaggerationLink();
+
+            function applyInspectionMode(frame) {
+                const frameWindow = frame.contentWindow;
+                const viewer = frameWindow && frameWindow.potreeViewer;
+                const cesium = frameWindow && frameWindow.cesiumViewer;
+                if (!viewer || !cesium) return;
+
+                const terrainOnly = terrainOnlyInput.checked;
+                for (const pointcloud of viewer.scene.pointclouds) pointcloud.visible = !terrainOnly;
+                for (let index = 0; index < cesium.imageryLayers.length; index++) {
+                    cesium.imageryLayers.get(index).show = !terrainOnly;
+                }
+                cesium.scene.globe.enableLighting = terrainOnly;
+                if (frameWindow.Cesium) {
+                    cesium.scene.globe.baseColor = terrainOnly
+                        ? frameWindow.Cesium.Color.fromCssColorString('#9ca4ab')
+                        : frameWindow.Cesium.Color.WHITE;
+                }
+            }
+
+            terrainOnlyInput.addEventListener('change', () => {
+                for (const frame of frames) applyInspectionMode(frame);
+            });
+
+            function copyView(sourceFrame, targetFrame) {
+                const sourceWindow = sourceFrame.contentWindow;
+                const targetWindow = targetFrame.contentWindow;
+                const sourceViewer = sourceWindow && sourceWindow.potreeViewer;
+                const targetViewer = targetWindow && targetWindow.potreeViewer;
+                if (!sourceViewer || !targetViewer) return;
+
+                const sourceView = sourceViewer.scene.view;
+                const targetView = targetViewer.scene.view;
+                targetView.position.copy(sourceView.position);
+                targetView.yaw = sourceView.yaw;
+                targetView.pitch = sourceView.pitch;
+                targetView.radius = sourceView.radius;
+
+                const sourceOffset = sourceWindow.document.getElementById('vertical_offset');
+                const targetOffset = targetWindow.document.getElementById('vertical_offset');
+                if (sourceOffset && targetOffset) targetOffset.value = sourceOffset.value;
+            }
+
+            function synchronize() {
+                const follower = leader === v2Frame ? v3Frame : v2Frame;
+                try {
+                    copyView(leader, follower);
+                    applyInspectionMode(v2Frame);
+                    applyInspectionMode(v3Frame);
+                } catch (error) {
+                    console.warn('Unable to synchronize comparison panes', error);
+                }
+                requestAnimationFrame(synchronize);
+            }
+
+            requestAnimationFrame(synchronize);
+        </script>
+    </body>
+</html>

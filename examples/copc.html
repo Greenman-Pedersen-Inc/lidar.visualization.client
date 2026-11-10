@@ -37,13 +37,31 @@
             <div id="potree_sidebar_container"></div>
         </div>
 
+        <div
+            style="
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                z-index: 1000;
+                padding: 8px 10px;
+                border-radius: 4px;
+                color: white;
+                background: rgba(0, 0, 0, 0.65);
+            "
+        >
+            <label for="copc_file_selector">Point cloud:</label>
+            <select id="copc_file_selector"></select>
+        </div>
+
         <script type="module">
             import * as THREE from '../libs/three.js/build/three.module.js';
             window.viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
 
             viewer.setEDLEnabled(true);
             viewer.setFOV(60);
-            viewer.setPointBudget(2_000_000);
+            viewer.setPointBudget(5_000_000);
+            viewer.setMinNodeSize(10);
+            viewer.useHQ = true;
             viewer.loadSettingsFromURL();
 
             viewer.setDescription('Loading COPC format');
@@ -53,10 +71,6 @@
                 $('#menu_appearance').next().show();
             });
 
-            var path =
-                'https://mach9cloud-storage-d2jlr365rfxa4u174444-prod.s3-accelerate.amazonaws.com/files/808aa676-4afc-4e68-a2e6-56ca95a1a86f/m9pd/Copc/points.copc.laz?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=ASIAZR6D7OHQUI7GLSDU%2F20260910%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20260910T125906Z&X-Amz-Expires=3600&X-Amz-Security-Token=IQoJb3JpZ2luX2VjEL3%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLXdlc3QtMiJHMEUCIQDUYE0WxGFznL167mG%2Fg2mmtTulGDMaLyBOhFCpuNpHRgIgEWl0WDW8Df8gDKqFsXApODRQjEM7KQjxm%2B05E4ZKKEoq5AMIhf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FARABGgw2NTcwMDQxMzA3ODUiDA5tAV1zp1uEIXXZTiq4A5ytghd2xL0vC%2BwkEELTvCs55yIK6Z0HyDPXGhBu4uZFc%2FQEBlwdGB69el1qkWSrHKVw6vcZwsZncXWcGqpaUNzeVnMEvJigKMkPZ0O3WqYhdLjyoPhRAtQZ4Ofu0rBIpaLxFkVd5LDV6eBiK%2FG%2Bk8uHvtTMl2XaPJtaNT6CxQO5LlF0AvT1iVIqL%2F0CGLWKxpiCVEj%2BchEIYKlL6V3aiiJB9UDg0IpN3pTZV2zVDqwJv8FyUQO8BZ7MkvI20m5tJ9d2fsVhfchOjA8uZXPD8%2BKfIMqVvxxmUenLojSLkgDwMMbaM2L63KWlkU0wumPZZdZK9iA03MfJBYOReLD2Gg0uLI1Ah8%2Bdou6YrSeomQDYfKhAUslaEixiZjnwUX1flR7KKmHKDQCKuFHYuFMiGDHG%2Fzu%2B4J%2F5dqzeKQMEcCJEU6PUnuEJuBuzXirn4%2FnNg4IShnrvCC97tkn%2BI6jhWOr4R9rO0mGTInFhl7E6T0v%2FozQf1znRDyq5bKeGCK9kNCWiDnOlmmwCU7niPL9TNd9t7UAU3TpxaJ9gKWLkHnnLvxbPLjJV50polIw1w0mdpww74PQ94HEyMJrTitUGOpIBkipDQv03QxMy086VKKSnu84mZeB8r2DhkyeOjx3T%2BrLz2Bqcq4uAYcXMBwOLTP2Zs2voX%2B9SyUKrI8b35LQUCagqAzKJnDSFkCXj39iJAgayAkClk5SgM73I4dM3agVR5Cp%2FHQ%2Bk9%2BeT1FWX8WEcUi15OTkWGsp%2Fr%2BmIQSlGkQb7PZ5F3Ysbed9mOiEk%2B4jEjPc%3D&X-Amz-Signature=216021977dbdacbae886375c6ce1f007d01faac0ace308dfebea024459e34c2f&X-Amz-SignedHeaders=host&response-cache-control=no-cache%2C%20no-store%2C%20must-revalidate&response-expires=Thu%2C%2010%20Sep%202026%2013%3A59%3A06%20GMT&x-id=GetObject';
-            var name = 'mach9cloud';
-
             var getQueryParam = function (name) {
                 name = name.replace(/[\[\]]/g, '\\$&');
                 var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
@@ -65,26 +79,60 @@
                 return decodeURIComponent(results[2].replace(/\+/g, ' '));
             };
 
-            var r = getQueryParam('r');
-            if (r) {
-                name = r;
-                var http = 'http';
-                if (r.substr(0, http.length) == http) path = name;
-                else path = '../pointclouds/' + name + '/ept.json';
+            const manifestResponse = await fetch('./resources/copc-manifest.json');
+            if (!manifestResponse.ok) {
+                throw new Error(`Failed to load COPC manifest: ${manifestResponse.status}`);
             }
 
+            const manifest = await manifestResponse.json();
+            const files = manifest.files.map((file) => ({
+                ...file,
+                url: new URL(file.path, manifest.baseUrl).href,
+            }));
+            if (files.length === 0) {
+                throw new Error('The COPC manifest contains no files');
+            }
+
+            const requested = getQueryParam('r');
+            const loadAll = requested === 'all';
+            const selected =
+                files.find((file) => requested === file.path || requested === file.name || requested === file.url) || files[0];
+            const path = requested && requested.startsWith('http') ? requested : selected.url;
+            const filesToLoad = loadAll ? files : [{ ...selected, url: path }];
+
+            const selector = document.getElementById('copc_file_selector');
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = `All point clouds (${files.length})`;
+            allOption.selected = loadAll;
+            selector.appendChild(allOption);
+            files.forEach((file) => {
+                const option = document.createElement('option');
+                option.value = file.url;
+                option.textContent = file.name;
+                option.selected = !loadAll && file.url === path;
+                selector.appendChild(option);
+            });
+            selector.addEventListener('change', () => {
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('r', selector.value);
+                nextUrl.searchParams.set('c', getQueryParam('c') || 'intensity');
+                window.location.assign(nextUrl);
+            });
+
             var c = getQueryParam('c');
-            Potree.loadPointCloud(path, name, function (e) {
+            const loaded = await Promise.all(filesToLoad.map((file) => Potree.loadPointCloud(file.url, file.name)));
+            loaded.forEach((e) => {
                 viewer.scene.addPointCloud(e.pointcloud);
 
                 let material = e.pointcloud.material;
                 material.size = 1;
                 material.pointSizeType = Potree.PointSizeType.ADAPTIVE;
-                // if (c) material.activeAttributeName = c;
-                material.activeAttributeName = c || 'intensity';
-
-                viewer.fitToScreen(0.5);
+                material.activeAttributeName = c || 'rgba';
             });
+
+            viewer.setDescription(loadAll ? `Loaded ${loaded.length} COPC point clouds` : selected.name);
+            viewer.fitToScreen(0.5);
         </script>
     </body>
 </html>

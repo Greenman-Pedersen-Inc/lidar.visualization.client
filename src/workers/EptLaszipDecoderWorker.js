@@ -159,6 +159,7 @@ async function readUsingDataView(event) {
 		views.color8[4 * i + 0] = normalizeColor(views.color16[3 * i + 0]);
 		views.color8[4 * i + 1] = normalizeColor(views.color16[3 * i + 1]);
 		views.color8[4 * i + 2] = normalizeColor(views.color16[3 * i + 2]);
+		views.color8[4 * i + 3] = 255;
 		views.gpsTime32[i] = views.gpsTime64[i] - ranges.gpsTime[0]
 	}
 

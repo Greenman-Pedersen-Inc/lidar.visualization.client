@@ -1,0 +1,69 @@
+name: Publish COPC Cesium review
+
+on:
+  push:
+    branches:
+      - copc-cesium-review
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: copc-cesium-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build Potree
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Assemble review site
+        shell: bash
+        run: |
+          mkdir -p _site/examples/resources
+          cp -R build _site/build
+          cp -R libs _site/libs
+          cp examples/copc_cesium.html _site/examples/copc_cesium.html
+          cp examples/resources/copc-manifest.json _site/examples/resources/copc-manifest.json
+          touch _site/.nojekyll
+          printf '%s\n' \
+            '<!doctype html>' \
+            '<html lang="en">' \
+            '<head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=examples/copc_cesium.html"><title>COPC Cesium review</title></head>' \
+            '<body><a href="examples/copc_cesium.html">Open the COPC Cesium viewer</a></body>' \
+            '</html>' > _site/index.html
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

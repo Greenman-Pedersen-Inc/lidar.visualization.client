@@ -29,18 +29,32 @@ require([
     const closeLidarViewerButton = document.getElementById('close-lidar-viewer-button');
     const restartTourButton = document.getElementById('restart-tour-button');
 
-    const CRED = 'cred_location_storage';
-    const credentials = JSON.parse(window.localStorage.getItem(CRED));
+    const CRED = 'gams_auth_session';
+    window.localStorage.removeItem('cred_location_storage');
+    window.sessionStorage.removeItem('cred_location_storage');
+    let credentials = null;
+    try {
+        credentials = JSON.parse(window.sessionStorage.getItem(CRED));
+    } catch (error) {
+        console.error('Unable to read the current login session', error);
+        window.sessionStorage.removeItem(CRED);
+    }
+    const redirectToLogin = () => {
+        window.sessionStorage.removeItem(CRED);
+        window.location.replace('../login/');
+    };
+    if (
+        !credentials?.token ||
+        !Number.isFinite(Number(credentials.expiry)) ||
+        Number(credentials.expiry) <= Date.now()
+    ) {
+        redirectToLogin();
+        return;
+    }
     function loadMenu(credentials) {
         if (credentials && credentials.token) {
             const expiryTime = credentials.expiry - Date.now();
-            if (expiryTime >= 0) {
-                setTimeout(() => {
-                    window.location = '../login';
-                }, expiryTime);
-            } else {
-                window.location = '../login';
-            }
+            setTimeout(redirectToLogin, expiryTime);
             return fetch(baseURL + 'run_list', {
                 method: 'GET', // or POST, PUT, DELETE, etc.
                 // cache: 'no-store',
@@ -53,7 +67,7 @@ require([
                         return response.json();
                     } else {
                         if (response.status === 401) {
-                            window.location = '../login';
+                            redirectToLogin();
                         } else {
                             throw 'Failed to fetch data from the server. Please try refreshing the page.';
                         }
@@ -75,7 +89,7 @@ require([
                     return data.flatList;
                 });
         } else {
-            window.location = '../login';
+            redirectToLogin();
         }
     }
 

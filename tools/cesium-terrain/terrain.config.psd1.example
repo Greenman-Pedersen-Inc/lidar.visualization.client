@@ -1,0 +1,75 @@
+@{
+    # Local Windows directories. InputDir must contain *.copc.laz files.
+    InputDir = 'D:\lidar\Baker-2021-Route9-North-middle10-20260917-101430\lidar'
+    WorkDir = 'D:\lidar\terrain-work'
+
+    # Optional absolute override. Leave empty to find the PDAL Conda environment
+    # the same way as lidar.organization\convert_package_las_to_copc.ps1.
+    CondaEnvironmentDir = ''
+
+    # Optional absolute overrides. Leave empty when the tools are in the Conda
+    # environment above.
+    PdalCommand = ''
+    GdalCommand = ''
+    GdalWarpCommand = ''
+    GdalInfoCommand = ''
+    GdalFillNoDataCommand = ''
+    GdalEditCommand = ''
+
+    # Mago 3DTerrainer requires Java 21+. JavaCommand may be empty when Java is
+    # discoverable. For a portable JDK, set it to the absolute bin\java.exe
+    # path. MagoTerrainJar must be the absolute downloaded JAR path.
+    JavaCommand = ''
+    MagoTerrainJar = 'C:\AppDev\NJDOT-footprint-handoff\tools\mago-3d-terrainer.jar'
+    MagoMaxHeapGb = 12
+
+    # Leave MagoMaxDepth empty to derive it from the GeoTIFF resolution.
+    MagoMaxDepth = ''
+    MagoIntensity = 4.0
+    MagoRasterMaxSize = 4096
+    MagoMosaicSize = 8
+
+    # Route 9 coordinate assumptions.
+    SourceHorizontalCrs = 'EPSG:3424'
+    SourceCompoundCrs = 'EPSG:3424+5703'
+    Target3dCrs = 'EPSG:4979'
+    ApplyVerticalTransform = $true
+    ZScale = 0.3048006096012192
+
+    # ASPRS ground is class 2. Use @(2, 17) to include bridge decks.
+    GroundClasses = @(2)
+
+    # Enable only when the COPCs do not already have usable ground classes.
+    ClassifyGround = $false
+    SmrfCell = 3.280833333
+    SmrfWindow = 59.055
+    SmrfThreshold = 1.640416667
+    SmrfSlope = 0.15
+    SmrfReturns = 'last,only'
+
+    # Optionally remove isolated points after selecting ground candidates.
+    # This can be expensive on very large point clouds.
+    DenoiseGroundCandidates = $false
+    OutlierMeanK = 12
+    OutlierMultiplier = 2.2
+
+    # These values are in source horizontal units, US survey feet here.
+    DemResolution = 1.0
+    DemRadius = 1.5
+    DemWindowSize = 5
+    FillDistance = 500
+    FillSmoothIterations = 2
+
+    # Optional absolute path to a background-only DEM already expressed as
+    # WGS84 ellipsoidal heights. It is warped to the LiDAR grid first, then the
+    # LiDAR raster is overlaid only where it has valid values.
+    BackgroundDem = ''
+
+    # Linear corridors occupy only part of their rectangular raster bounds.
+    # Mago supports NoData and adaptive tiling, so sparse coverage is expected.
+    MinimumValidPercent = 1.0
+
+    # These are written to UPLOAD.txt; the script does not upload anything.
+    DestinationS3Uri = 's3://njdot-lidar-streaming-test/Baker-2021-Route9-North-middle10-20260917-101430/terrain/'
+    PublicTerrainUrl = 'https://njdot-lidar-streaming-test.s3.us-east-1.amazonaws.com/Baker-2021-Route9-North-middle10-20260917-101430/terrain/'
+}
