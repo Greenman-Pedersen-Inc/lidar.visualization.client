@@ -1,9 +1,10 @@
-import * as THREE from '../libs/three.js/build/three.module.js';
+import * as THREE from '../../../libs/three.js/build/three.module.js';
 import Shepherd from 'https://cdn.jsdelivr.net/npm/shepherd.js@13.0.0/dist/esm/shepherd.mjs';
 import { offset } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.6.13/+esm';
 
 require([
     'esri/layers/FeatureLayer',
+    'esri/layers/TileLayer',
     'esri/layers/VectorTileLayer',
     'esri/Map',
     'esri/views/MapView',
@@ -16,13 +17,40 @@ require([
     'esri/widgets/FeatureTable',
     'esri/geometry/projection',
     'esri/geometry/SpatialReference',
-], (FeatureLayer, VectorTileLayer, Map, MapView, reactiveUtils, Compass, Legend, ScaleBar, BasemapToggle, Field, FeatureTable, projection, SpatialReference) => {
+], (FeatureLayer, TileLayer, VectorTileLayer, Map, MapView, reactiveUtils, Compass, Legend, ScaleBar, BasemapToggle, Field, FeatureTable, projection, SpatialReference) => {
     let animation;
     let classificationSelector;
-    // const baseURL = 'http://127.0.0.1:65000/v1/';
-    const baseURL = 'https://maps.gpinet.com/gpi-viewer/data/v1/';
+    const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const baseURL = isLocalHost ? 'http://127.0.0.1:65000/v1/' : 'https://maps.gpinet.com/gpi-viewer/data/v1/';
     // const featureServerURL = 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/';
     const featureServerURL = 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/ArcGIS/rest/services/njx_2300678_vectorTile/FeatureServer/';
+    const geophysicalLayerConfigs = [
+        {
+            id: 'em31-gps-ip',
+            title: 'EM31 GPS IP',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_EM31_GPS_IP_grd/MapServer',
+        },
+        {
+            id: 'em31-gps-qp',
+            title: 'EM31 GPS QP',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_EM31_GPS_QP_grd/MapServer',
+        },
+        {
+            id: 'em61-all',
+            title: 'EM61 All',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_EM61_All/MapServer',
+        },
+        {
+            id: 'gravity',
+            title: 'Gravity',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_Gravity_grd/MapServer',
+        },
+        {
+            id: 'vmg',
+            title: 'VMG',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_VMG_grd/MapServer',
+        },
+    ];
 
     // const playButton = document.getElementById('play-button');
     // const pauseButton = document.getElementById('pause-button');
@@ -68,8 +96,15 @@ require([
                     } else {
                         if (response.status === 401) {
                             redirectToLogin();
+                            throw new Error('The current login session is not valid.');
+                        } else if (isLocalHost) {
+                            console.warn(`Unable to load the local LiDAR run list (status ${response.status}). Continuing without local run data.`);
+                            return {
+                                tree: { children: [] },
+                                flatList: [],
+                            };
                         } else {
-                            throw 'Failed to fetch data from the server. Please try refreshing the page.';
+                            throw new Error('Failed to fetch data from the server. Please try refreshing the page.');
                         }
                     }
                 })
@@ -1272,6 +1307,101 @@ require([
                     document.body.append(this.domNode);
                 });
             }
+            function createGeophysicalLayerTab(config) {
+                const featureTabs = document.getElementById('feature-tables');
+                const tabNav = document.getElementById('feature-table-tab-nav');
+                const tabTitle = document.createElement('calcite-tab-title');
+                const tab = document.createElement('calcite-tab');
+                const tabContent = document.createElement('div');
+                const message = document.createElement('p');
+                const serviceLink = document.createElement('a');
+
+                tabTitle.textContent = config.title;
+                tabTitle.classList.add('hidden');
+                tabTitle.dataset.layerId = config.id;
+
+                tab.classList.add('hidden', 'raster-layer-tab');
+                tab.dataset.layerId = config.id;
+                tabContent.className = 'raster-layer-tab-content';
+                message.textContent = `${config.title} is a cached raster tile layer. Its ArcGIS service does not publish queryable feature records for a feature table.`;
+                serviceLink.href = config.url;
+                serviceLink.target = '_blank';
+                serviceLink.rel = 'noopener noreferrer';
+                serviceLink.textContent = 'Open ArcGIS service details';
+
+                tabContent.append(message, serviceLink);
+                tab.append(tabContent);
+                tabNav.append(tabTitle);
+                featureTabs.append(tab);
+
+                return { tab, tabTitle };
+            }
+            function selectFirstVisibleFeatureTab() {
+                const featureTabs = document.getElementById('feature-tables');
+                const tabNav = document.getElementById('feature-table-tab-nav');
+                const visibleTitles = Array.from(tabNav.querySelectorAll('calcite-tab-title:not(.hidden)'));
+                const visibleTabs = Array.from(featureTabs.querySelectorAll(':scope > calcite-tab:not(.hidden)'));
+
+                tabNav.querySelectorAll('calcite-tab-title').forEach((title) => {
+                    title.selected = false;
+                });
+                featureTabs.querySelectorAll(':scope > calcite-tab').forEach((tab) => {
+                    tab.selected = false;
+                });
+
+                if (visibleTitles.length > 0 && visibleTabs.length > 0) {
+                    visibleTitles[0].selected = true;
+                    visibleTabs[0].selected = true;
+                }
+            }
+            function setGeophysicalLayerVisibility(config, visible) {
+                config.layer.visible = visible;
+                config.tabTitle.classList.toggle('hidden', !visible);
+                config.tab.classList.toggle('hidden', !visible);
+
+                if (!visible && (config.tabTitle.selected || config.tab.selected)) {
+                    selectFirstVisibleFeatureTab();
+                }
+            }
+            function createGeophysicalLayerMenu(configs) {
+                const menu = document.createElement('details');
+                const menuButton = document.createElement('summary');
+                const menuOptions = document.createElement('div');
+
+                menu.className = 'geophysical-layer-menu esri-widget';
+                menuButton.className = 'geophysical-layer-menu-button';
+                menuButton.textContent = 'Geophysical Layers';
+                menuButton.title = 'Toggle geophysical raster layers';
+                menuOptions.className = 'geophysical-layer-menu-options';
+
+                configs.forEach((config) => {
+                    const option = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    const labelText = document.createElement('span');
+
+                    option.className = 'geophysical-layer-option';
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = config.layer.visible;
+                    checkbox.setAttribute('aria-label', `Show ${config.title}`);
+                    labelText.textContent = config.title;
+
+                    checkbox.addEventListener('change', () => {
+                        setGeophysicalLayerVisibility(config, checkbox.checked);
+                    });
+
+                    option.append(checkbox, labelText);
+                    menuOptions.append(option);
+                });
+
+                menu.append(menuButton, menuOptions);
+                view.ui.add(menu, { position: 'top-right', index: 2 });
+
+                document.addEventListener('click', (event) => {
+                    if (!menu.contains(event.target)) {
+                        menu.removeAttribute('open');
+                    }
+                });
+            }
             function loadRouteTest(folderInfo, firstSegment = false) {
                 try {
                     const metadataPath = `${folderInfo}/metadata.json`;
@@ -1727,12 +1857,28 @@ require([
                         },
                     },
                 });
+                const geophysicalLayers = geophysicalLayerConfigs.map((config) => {
+                    config.layer = new TileLayer({
+                        id: `geophysical-${config.id}`,
+                        title: config.title,
+                        url: config.url,
+                        visible: false,
+                    });
+                    const tabElements = createGeophysicalLayerTab(config);
+                    config.tab = tabElements.tab;
+                    config.tabTitle = tabElements.tabTitle;
+
+                    return config.layer;
+                });
 
                 legend.layerInfos.push({ layer: retainingWallFeatureLayer, title: 'Retaining Wall' });
                 legend.layerInfos.push({ layer: rockSlopeFeatureLayer, title: 'Rock & Soil Slope' });
                 legend.layerInfos.push({ layer: crossSectionFeatureLayer, title: 'Cross Section' });
                 legend.layerInfos.push({ layer: runCoverageFeatureLayer, title: 'Lidar Coverage' });
                 legend.layerInfos.push({ layer: imageryLocationFeatureLayer, title: '360 Imagery' });
+                geophysicalLayerConfigs.forEach((config) => {
+                    legend.layerInfos.push({ layer: config.layer, title: config.title });
+                });
 
                 view.ui.add(scaleBar, 'bottom-right');
                 view.ui.add(basemapToggle, 'bottom-left');
@@ -1742,6 +1888,7 @@ require([
                     position: 'bottom-left',
                 };
                 view.ui.add(legend, 'bottom-right');
+                createGeophysicalLayerMenu(geophysicalLayerConfigs);
 
                 // flatLidarList
                 //     .filter((path) => path.indexOf('80_EB') >= 0)
@@ -1811,6 +1958,7 @@ require([
                 );
 
                 // map.add(elevationLayer); // adds the layer to the map
+                map.addMany(geophysicalLayers); // keeps the optional raster overlays below the feature layers
                 map.add(stateOutline); // adds the layer to the map
                 map.add(runCoverageFeatureLayer); // adds the layer to the map
                 map.add(retainingWallFeatureLayer); // adds the layer to the map
