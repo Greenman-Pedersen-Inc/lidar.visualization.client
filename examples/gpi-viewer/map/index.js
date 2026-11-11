@@ -24,32 +24,122 @@ require([
     const baseURL = isLocalHost ? 'http://127.0.0.1:65000/v1/' : 'https://maps.gpinet.com/gpi-viewer/data/v1/';
     // const featureServerURL = 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678/FeatureServer/';
     const featureServerURL = 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/ArcGIS/rest/services/njx_2300678_vectorTile/FeatureServer/';
+    const mineFeatureServerURL = 'https://services1.arcgis.com/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_230067800_GAMS_Mine_Vector/FeatureServer/';
     const geophysicalLayerConfigs = [
         {
             id: 'em31-gps-ip',
             title: 'EM31 GPS IP',
-            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_EM31_GPS_IP_grd/MapServer',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/T25J24_EM31_GPS_IP_grd_2/MapServer',
+            metadata: {
+                fileName: 'EM31-GPS-IP.grd',
+                dataset: 'Time Domain Electromagnetic Induction - Differential Response',
+                instrument: 'EMI transmitter coil',
+                reportPages: '5-8',
+                testingDate: '06-04-26',
+                testingFirm: 'Hager-Richter',
+                comments: "The EM31 data was acquired in the vertical dipole mode with the instrument's boom parallel to the survey lines as shown in Figure 6 of the Report as in-phase response.",
+            },
         },
         {
             id: 'em31-gps-qp',
             title: 'EM31 GPS QP',
-            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_EM31_GPS_QP_grd/MapServer',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/T25J24_EM31_GPS_QP_grd_2/MapServer',
+            metadata: {
+                fileName: 'EM31-GPS-QP.grd',
+                dataset: 'Time Domain Electromagnetic Induction - Differential Response',
+                instrument: 'EMI transmitter coil',
+                reportPages: '5-8',
+                testingDate: '06-04-26',
+                testingFirm: 'Hager-Richter',
+                comments: "The EM31 data was acquired in the vertical dipole mode with the instrument's boom parallel to the survey lines as shown in Figure 5 of the Report as apparent conductivity response.",
+            },
         },
         {
             id: 'em61-all',
             title: 'EM61 All',
-            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_EM61_All/MapServer',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/T25J24_EM61_All_2/MapServer',
+            metadata: {
+                fileName: 'EM61 All.grd',
+                dataset: 'Time Domain Electromagnetic Induction - Differential Response',
+                instrument: 'EMI transmitter coil',
+                reportPages: '5-8',
+                testingDate: '06-04-26',
+                testingFirm: 'Hager-Richter',
+                comments: 'Contoured in Surfer by Golder Software and presented as color contour plots of EM61 differential response as shown in Figure 4 of the Report.',
+            },
         },
         {
             id: 'gravity',
             title: 'Gravity',
-            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_Gravity_grd/MapServer',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/T25J24_Gravity_grd_2/MapServer',
+            metadata: {
+                fileName: 'Gravity.grd',
+                dataset: 'Bouguer Anomaly Map',
+                instrument: 'Scintrex CG-5 gravity meter',
+                reportPages: '18-20',
+                testingDate: '06-04-26',
+                testingFirm: 'Hager-Richter',
+                comments: 'Bouguer Anomaly Map as shown in Figure 12 of the Report.',
+            },
         },
         {
             id: 'vmg',
             title: 'VMG',
-            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/njx_2300678_T25J24_VMG_grd/MapServer',
+            url: 'https://tiles.arcgis.com/tiles/VLhaRwzp3uCQMr7y/arcgis/rest/services/T25J24_VMG_grd_2/MapServer',
+            metadata: {
+                fileName: 'VMG.grd',
+                dataset: 'Vertical Magnetic Gradient Plot',
+                instrument: 'Geometrics G858 cesium vapor magnetometer using two sensors with a vertical separation of one meter',
+                reportPages: '10',
+                testingDate: '06-04-26',
+                testingFirm: 'Hager-Richter',
+                comments: 'Vertical magnetic gradient data as shown in Figure 8 of the Report.',
+            },
         },
+    ];
+    const mineFeatureLayerConfigs = [
+        {
+            id: 'mine-geophysical-lines',
+            title: 'Geophysical Lines',
+            layerId: 6,
+            featureField: 'line_feature',
+            featureFieldLabel: 'Line feature',
+        },
+        {
+            id: 'mine-gpr-lines',
+            title: 'GPR Lines',
+            layerId: 4,
+            featureField: 'line_feature',
+            featureFieldLabel: 'Line feature',
+        },
+        {
+            id: 'mine-geophysical-area',
+            title: 'Geophysical Area',
+            layerId: 5,
+            featureField: 'poly_feature',
+            featureFieldLabel: 'Polygon feature',
+        },
+        {
+            id: 'mine-gravity-stations',
+            title: 'Gravity Stations',
+            layerId: 3,
+            featureField: 'point_feature',
+            featureFieldLabel: 'Point feature',
+        },
+        {
+            id: 'mine-magnetic-stations',
+            title: 'Magnetic Stations',
+            layerId: 2,
+            featureField: 'line_feature',
+            featureFieldLabel: 'Line feature',
+        },
+    ];
+    const mineFeatureMetadataFields = [
+        { fieldName: 'instrument_used', label: 'Instrument used' },
+        { fieldName: 'report_pages', label: 'Report pages' },
+        { fieldName: 'testing_date', label: 'Testing date' },
+        { fieldName: 'testing_firm', label: 'Testing firm' },
+        { fieldName: 'comments', label: 'Comments' },
     ];
 
     // const playButton = document.getElementById('play-button');
@@ -1126,6 +1216,8 @@ require([
                 };
                 this.close = function () {
                     this.domNode.classList.add('hidden');
+                    filterButton.classList.remove('active');
+                    toggle.classList.remove('active');
                 };
                 this.open = function (event) {
                     const filterBoxes = document.querySelectorAll('.filter-box');
@@ -1238,6 +1330,13 @@ require([
                         self.open(event);
                     }
                 });
+                document.addEventListener('click', (event) => {
+                    const clickedFilter = self.domNode.contains(event.target) || filterButton.contains(event.target);
+
+                    if (!clickedFilter) {
+                        self.close();
+                    }
+                });
 
                 reactiveUtils.watch(
                     // watch for any changes done on the layer
@@ -1313,8 +1412,20 @@ require([
                 const tabTitle = document.createElement('calcite-tab-title');
                 const tab = document.createElement('calcite-tab');
                 const tabContent = document.createElement('div');
-                const message = document.createElement('p');
+                const metadataHeader = document.createElement('div');
+                const fileName = document.createElement('span');
                 const serviceLink = document.createElement('a');
+                const metadataScroller = document.createElement('div');
+                const metadataTable = document.createElement('table');
+                const metadataBody = document.createElement('tbody');
+                const metadataFields = [
+                    ['Dataset', config.metadata.dataset],
+                    ['Instrument used', config.metadata.instrument],
+                    ['Report pages', config.metadata.reportPages],
+                    ['Testing date', config.metadata.testingDate],
+                    ['Testing firm', config.metadata.testingFirm],
+                    ['Comments', config.metadata.comments],
+                ];
 
                 tabTitle.textContent = config.title;
                 tabTitle.classList.add('hidden');
@@ -1323,18 +1434,58 @@ require([
                 tab.classList.add('hidden', 'raster-layer-tab');
                 tab.dataset.layerId = config.id;
                 tabContent.className = 'raster-layer-tab-content';
-                message.textContent = `${config.title} is a cached raster tile layer. Its ArcGIS service does not publish queryable feature records for a feature table.`;
+                metadataHeader.className = 'raster-metadata-header esri-feature-table__title';
+                fileName.className = 'raster-metadata-title';
+                fileName.textContent = config.metadata.fileName;
                 serviceLink.href = config.url;
                 serviceLink.target = '_blank';
                 serviceLink.rel = 'noopener noreferrer';
                 serviceLink.textContent = 'Open ArcGIS service details';
+                metadataScroller.className = 'raster-metadata-scroller';
+                metadataTable.className = 'raster-metadata-table';
 
-                tabContent.append(message, serviceLink);
+                metadataFields.forEach(([label, value]) => {
+                    const row = document.createElement('tr');
+                    const heading = document.createElement('th');
+                    const cell = document.createElement('td');
+
+                    heading.scope = 'row';
+                    heading.textContent = label;
+                    cell.textContent = value;
+                    row.append(heading, cell);
+                    metadataBody.append(row);
+                });
+
+                metadataHeader.append(fileName, serviceLink);
+                metadataTable.append(metadataBody);
+                metadataScroller.append(metadataTable);
+                tabContent.append(metadataHeader, metadataScroller);
                 tab.append(tabContent);
                 tabNav.append(tabTitle);
                 featureTabs.append(tab);
 
                 return { tab, tabTitle };
+            }
+            function createMineFeatureLayerTab(config) {
+                const featureTabs = document.getElementById('feature-tables');
+                const tabNav = document.getElementById('feature-table-tab-nav');
+                const tabTitle = document.createElement('calcite-tab-title');
+                const tab = document.createElement('calcite-tab');
+                const tableContainer = document.createElement('div');
+
+                tabTitle.textContent = config.title;
+                tabTitle.classList.add('hidden');
+                tabTitle.dataset.layerId = config.id;
+
+                tab.classList.add('hidden');
+                tab.dataset.layerId = config.id;
+                tableContainer.id = `${config.id}-feature-table-container`;
+
+                tab.append(tableContainer);
+                tabNav.append(tabTitle);
+                featureTabs.append(tab);
+
+                return { tab, tabTitle, tableContainer };
             }
             function selectFirstVisibleFeatureTab() {
                 const featureTabs = document.getElementById('feature-tables');
@@ -1371,25 +1522,63 @@ require([
                 menu.className = 'geophysical-layer-menu esri-widget';
                 menuButton.className = 'geophysical-layer-menu-button';
                 menuButton.textContent = 'Geophysical Layers';
-                menuButton.title = 'Toggle geophysical raster layers';
+                menuButton.title = 'Toggle geophysical map layers';
                 menuOptions.className = 'geophysical-layer-menu-options';
 
                 configs.forEach((config) => {
-                    const option = document.createElement('label');
+                    const option = document.createElement('div');
+                    const toggle = document.createElement('label');
                     const checkbox = document.createElement('input');
                     const labelText = document.createElement('span');
+                    const centerButton = document.createElement('button');
+                    const centerIcon = document.createElement('i');
 
                     option.className = 'geophysical-layer-option';
+                    toggle.className = 'geophysical-layer-toggle';
                     checkbox.type = 'checkbox';
                     checkbox.checked = config.layer.visible;
                     checkbox.setAttribute('aria-label', `Show ${config.title}`);
                     labelText.textContent = config.title;
+                    centerButton.className = 'geophysical-layer-center-button';
+                    centerButton.type = 'button';
+                    centerButton.title = `Center map on ${config.title}`;
+                    centerButton.setAttribute('aria-label', `Center map on ${config.title}`);
+                    centerButton.disabled = true;
+                    centerIcon.className = 'bi bi-crosshair2';
+                    centerIcon.setAttribute('aria-hidden', 'true');
+                    centerButton.append(centerIcon);
 
                     checkbox.addEventListener('change', () => {
                         setGeophysicalLayerVisibility(config, checkbox.checked);
                     });
+                    centerButton.addEventListener('click', async () => {
+                        const extent = config.layer.fullExtent;
 
-                    option.append(checkbox, labelText);
+                        if (!extent) {
+                            return;
+                        }
+
+                        try {
+                            await view.goTo(extent.expand(1.2));
+                            menu.removeAttribute('open');
+                        } catch (error) {
+                            if (error.name !== 'AbortError') {
+                                console.error(`Unable to center the map on ${config.title}`, error);
+                            }
+                        }
+                    });
+
+                    config.layer
+                        .load()
+                        .then(() => {
+                            centerButton.disabled = !config.layer.fullExtent;
+                        })
+                        .catch((error) => {
+                            console.error(`Unable to load the extent for ${config.title}`, error);
+                        });
+
+                    toggle.append(checkbox, labelText);
+                    option.append(toggle, centerButton);
                     menuOptions.append(option);
                 });
 
@@ -1870,13 +2059,44 @@ require([
 
                     return config.layer;
                 });
+                const mineFeatureLayers = mineFeatureLayerConfigs.map((config) => {
+                    const fieldInfos = [
+                        { fieldName: config.featureField, label: config.featureFieldLabel },
+                        ...mineFeatureMetadataFields,
+                    ];
+
+                    config.layer = new FeatureLayer({
+                        id: config.id,
+                        title: config.title,
+                        url: mineFeatureServerURL + config.layerId,
+                        outFields: ['*'],
+                        visible: false,
+                        popupTemplate: {
+                            title: `${config.title}: {${config.featureField}}`,
+                            outFields: ['*'],
+                            content: [
+                                {
+                                    type: 'fields',
+                                    fieldInfos,
+                                },
+                            ],
+                        },
+                    });
+                    const tabElements = createMineFeatureLayerTab(config);
+                    config.tab = tabElements.tab;
+                    config.tabTitle = tabElements.tabTitle;
+                    config.tableContainer = tabElements.tableContainer;
+
+                    return config.layer;
+                });
+                const allGeophysicalLayerConfigs = [...geophysicalLayerConfigs, ...mineFeatureLayerConfigs];
 
                 legend.layerInfos.push({ layer: retainingWallFeatureLayer, title: 'Retaining Wall' });
                 legend.layerInfos.push({ layer: rockSlopeFeatureLayer, title: 'Rock & Soil Slope' });
                 legend.layerInfos.push({ layer: crossSectionFeatureLayer, title: 'Cross Section' });
                 legend.layerInfos.push({ layer: runCoverageFeatureLayer, title: 'Lidar Coverage' });
                 legend.layerInfos.push({ layer: imageryLocationFeatureLayer, title: '360 Imagery' });
-                geophysicalLayerConfigs.forEach((config) => {
+                allGeophysicalLayerConfigs.forEach((config) => {
                     legend.layerInfos.push({ layer: config.layer, title: config.title });
                 });
 
@@ -1888,7 +2108,7 @@ require([
                     position: 'bottom-left',
                 };
                 view.ui.add(legend, 'bottom-right');
-                createGeophysicalLayerMenu(geophysicalLayerConfigs);
+                createGeophysicalLayerMenu(allGeophysicalLayerConfigs);
 
                 // flatLidarList
                 //     .filter((path) => path.indexOf('80_EB') >= 0)
@@ -1958,7 +2178,7 @@ require([
                 );
 
                 // map.add(elevationLayer); // adds the layer to the map
-                map.addMany(geophysicalLayers); // keeps the optional raster overlays below the feature layers
+                map.addMany([...geophysicalLayers, ...mineFeatureLayers]); // keeps the optional geophysical layers below the primary asset layers
                 map.add(stateOutline); // adds the layer to the map
                 map.add(runCoverageFeatureLayer); // adds the layer to the map
                 map.add(retainingWallFeatureLayer); // adds the layer to the map
@@ -2027,6 +2247,19 @@ require([
                         ],
                     },
                     container: 'retaining-wall-feature-table-container',
+                });
+                mineFeatureLayerConfigs.forEach((config) => {
+                    config.featureTable = new FeatureTable({
+                        view,
+                        layer: config.layer,
+                        tableTemplate: {
+                            columnTemplates: [
+                                { type: 'field', fieldName: config.featureField, label: config.featureFieldLabel },
+                                ...mineFeatureMetadataFields.map((field) => ({ type: 'field', ...field })),
+                            ],
+                        },
+                        container: config.tableContainer,
+                    });
                 });
 
                 new AssetFilter(view, 'Retaining Wall', retainingWallFeatureLayer);
