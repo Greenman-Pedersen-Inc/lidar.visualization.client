@@ -1,4 +1,7 @@
-import * as THREE from '../libs/three.js/build/three.module.js';
+const threeModulePath = import.meta.url.includes('/examples/gpi-viewer/')
+    ? '../../../libs/three.js/build/three.module.js'
+    : '../libs/three.js/build/three.module.js';
+const THREE = await import(threeModulePath);
 import Shepherd from 'https://cdn.jsdelivr.net/npm/shepherd.js@13.0.0/dist/esm/shepherd.mjs';
 import { offset } from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.6.13/+esm';
 
@@ -235,19 +238,25 @@ require([
             }
             function positionCamera(metadata, coordinates) {
                 let centroidX, centroidY, centroidZ;
+                const targetZ = metadata.boundingBox.min[2];
 
                 if (coordinates) {
                     centroidX = coordinates.x;
                     centroidY = coordinates.y;
-                    centroidZ = view.extent.width / Math.tan((60 * 3.1415926) / 180);
+                    centroidZ = targetZ + coordinates.cameraOffset;
                 } else {
                     centroidX = metadata.boundingBox.min[0] + (metadata.boundingBox.max[0] - metadata.boundingBox.min[0]) / 2;
                     centroidY = metadata.boundingBox.min[1] + (metadata.boundingBox.max[1] - metadata.boundingBox.min[1]) / 2;
-                    centroidZ = view.extent.width / Math.tan((60 * 3.1415926) / 180);
+                    const pointCloudWidth = metadata.boundingBox.max[0] - metadata.boundingBox.min[0];
+                    const pointCloudDepth = metadata.boundingBox.max[1] - metadata.boundingBox.min[1];
+                    const pointCloudRadius = Math.hypot(pointCloudWidth, pointCloudDepth) / 2;
+                    const verticalFov = (viewer.getFOV() * Math.PI) / 180;
+
+                    centroidZ = targetZ + pointCloudRadius / Math.sin(verticalFov / 2);
                 }
 
                 viewer.scene.view.position.set(centroidX, centroidY, centroidZ);
-                viewer.scene.view.lookAt(new THREE.Vector3(centroidX, centroidY, metadata.boundingBox.min[2]));
+                viewer.scene.view.lookAt(new THREE.Vector3(centroidX, centroidY, targetZ));
 
                 return metadata;
             }
@@ -1766,12 +1775,18 @@ require([
                             const segmentParts = lidarSegmentName.split('_');
                             const routeName = segmentParts[0];
                             const routeDirection = segmentParts[1];
-                            const sri = String(attributes.SRI || `${routeName.padStart(8, '0')}__`).trim();
-                            const sriRouteName = sri.endsWith('__') ? sri.slice(0, -2) : routeName.padStart(8, '0');
-                            const normalizedSegmentName = [sriRouteName, ...segmentParts.slice(1)].join('_');
-                            const lidarDirectory = `lidar/${yearCollected}/${sri}/${routeDirection}`;
-                            const expectedPaths = new Set([`${lidarDirectory}/${lidarSegmentName}.las`, `${lidarDirectory}/${normalizedSegmentName}.las`]);
-                            const lidarPath = flatLidarList.find((element) => expectedPaths.has(element.replaceAll('\\', '/')));
+                            const normalizedRouteName = routeName.padStart(8, '0');
+                            const routeFolder = `${normalizedRouteName}__`;
+                            const normalizedSegmentName = [normalizedRouteName, ...segmentParts.slice(1)].join('_');
+                            const lidarDirectorySuffix = `/${yearCollected}/${routeFolder}/${routeDirection}`;
+                            const expectedPathSuffixes = [
+                                `${lidarDirectorySuffix}/${lidarSegmentName}.las`,
+                                `${lidarDirectorySuffix}/${normalizedSegmentName}.las`,
+                            ];
+                            const lidarPath = flatLidarList.find((element) => {
+                                const normalizedPath = element.replaceAll('\\', '/');
+                                return expectedPathSuffixes.some((expectedPath) => normalizedPath.endsWith(expectedPath));
+                            });
 
                             if (!lidarPath) {
                                 document.getElementById('no-results').setAttribute('open', '');
@@ -1795,14 +1810,15 @@ require([
                                 if (view.popup.selectedFeature.layer.title.includes('LidarCoverage')) {
                                     loadRoute(lidarPath, lidarSegmentName);
                                 } else {
-                                    if (view.popup.selectedFeature.geometry.centroid) {
-                                        view.popup.selectedFeature.geometry.centroid.z = 1000000 / view.scale;
-                                        loadRoute(lidarPath, lidarSegmentName, view.popup.selectedFeature.geometry.centroid);
-                                    } else if (view.popup.selectedFeature.geometry.extent) {
-                                        view.popup.selectedFeature.geometry.extent.center.z = 1000000 / view.scale;
-                                        loadRoute(lidarPath, lidarSegmentName, view.popup.selectedFeature.geometry.extent.center);
+                                    const geometry = view.popup.selectedFeature.geometry;
+                                    const cameraOffset = 1000000 / view.scale;
+
+                                    if (geometry.centroid) {
+                                        loadRoute(lidarPath, lidarSegmentName, { x: geometry.centroid.x, y: geometry.centroid.y, cameraOffset });
+                                    } else if (geometry.extent) {
+                                        loadRoute(lidarPath, lidarSegmentName, { x: geometry.extent.center.x, y: geometry.extent.center.y, cameraOffset });
                                     } else {
-                                        loadRoute(lidarPath, lidarSegmentName, { x: view.popup.selectedFeature.geometry.x, y: view.popup.selectedFeature.geometry.y, z: 1000000 / view.scale });
+                                        loadRoute(lidarPath, lidarSegmentName, { x: geometry.x, y: geometry.y, cameraOffset });
                                     }
                                 }
                             });
