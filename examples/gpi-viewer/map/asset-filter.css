@@ -78,7 +78,7 @@ tr {
 .esri-ui-top-right {
     flex-flow: row;
     flex-direction: row-reverse;
-    align-items: baseline;
+    align-items: flex-start;
     gap: 10px;
 }
 
@@ -592,7 +592,9 @@ tr.highlight {
     height: 32px;
     line-height: 16px;
     width: auto;
+    font-family: 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 14px;
+    font-weight: 400;
     background-color: white;
     color: black;
     padding: 8px;

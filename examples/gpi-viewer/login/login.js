@@ -1,6 +1,9 @@
 'use strict';
 
 const AUTH_STORAGE_KEY = 'gams_auth_session';
+const AUTH_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    ? 'https://maps.gpinet.com/gpi-viewer/data/v1/'
+    : '../data/v1/';
 window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
 const form = document.querySelector('#login-form');
 const usernameInput = document.querySelector('#username');
@@ -17,7 +20,7 @@ form.addEventListener('submit', async (event) => {
     spinner.classList.remove('hidden');
 
     try {
-        const response = await fetch('../data/v1/authenticate', {
+        const response = await fetch(`${AUTH_BASE_URL}authenticate`, {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
