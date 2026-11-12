@@ -136,6 +136,25 @@ require([
             featureField: 'line_feature',
             featureFieldLabel: 'Line feature',
         },
+        {
+            id: 'njdep-abandoned-mines',
+            title: 'Abandoned Mines (NJDEP)',
+            url: 'https://mapsdep.nj.gov/arcgis/rest/services/Features/Geology/MapServer/0',
+            featureField: 'SITENAME',
+            featureFieldLabel: 'Site name',
+            metadataFields: [
+                { fieldName: 'ALTNAME', label: 'Alternate name' },
+                { fieldName: 'BEGDATE', label: 'Begin date' },
+                { fieldName: 'ENDDATE', label: 'End date' },
+                { fieldName: 'MJRMINERAL', label: 'Major mineral' },
+                { fieldName: 'ELEMENT', label: 'Element' },
+                { fieldName: 'MUN', label: 'Municipality' },
+                { fieldName: 'COUNTY', label: 'County' },
+                { fieldName: 'QUAD_NAME', label: 'Quadrangle' },
+                { fieldName: 'GPS', label: 'GPS located' },
+                { fieldName: 'COMMENTS', label: 'Comments' },
+            ],
+        },
     ];
     const mineFeatureMetadataFields = [
         { fieldName: 'instrument_used', label: 'Instrument used' },
@@ -316,6 +335,19 @@ require([
                     console.log(error);
                 }
             }
+            function setPotreeViewerVisible(isVisible) {
+                const mapContainer = document.getElementById('map-container');
+                const potreeContainer = document.getElementById('potree-container');
+                const featureTabContainer = document.querySelector('.feature-tab-container');
+
+                featureTabContainer.classList.toggle('hidden', isVisible);
+                mapContainer.classList.toggle('hidden', isVisible);
+                potreeContainer.classList.toggle('hidden', !isVisible);
+
+                if (window.viewer?.renderer) {
+                    viewer.renderer.setAnimationLoop(isVisible ? viewer.loop.bind(viewer) : null);
+                }
+            }
             async function loadRoute(folderPath, roadSegment = '', coordinates) {
                 try {
                     const metadataPath = `${folderPath}/metadata.json`;
@@ -327,13 +359,7 @@ require([
 
                     const metadata = await metadataRequest.json();
                     const route = metadata.name.split('_')[0];
-                    const mapContainer = document.getElementById('map-container');
-                    const potreeContainer = document.getElementById('potree-container');
-                    const featureTabContainer = document.querySelector('.feature-tab-container');
-
-                    featureTabContainer.classList.add('hidden');
-                    mapContainer.classList.add('hidden');
-                    potreeContainer.classList.remove('hidden');
+                    setPotreeViewerVisible(true);
                     // always position the camera when loading a route (whether previously loaded or not)
                     if (coordinates) {
                         positionCamera(metadata, coordinates);
@@ -1677,6 +1703,7 @@ require([
             //     });
 
             window.viewer = new Potree.Viewer(document.getElementById('potree_render_area'));
+            viewer.renderer.setAnimationLoop(null);
             viewer.setEDLEnabled(true);
             viewer.setPointBudget(1_000_000);
             viewer.loadSettingsFromURL();
@@ -1693,13 +1720,7 @@ require([
             });
 
             closeLidarViewerButton.addEventListener('click', (event) => {
-                const mapContainer = document.getElementById('map-container');
-                const potreeContainer = document.getElementById('potree-container');
-                const featureTabContainer = document.querySelector('.feature-tab-container');
-
-                featureTabContainer.classList.remove('hidden');
-                mapContainer.classList.remove('hidden');
-                potreeContainer.classList.add('hidden');
+                setPotreeViewerVisible(false);
             });
 
             view.when(() => {
@@ -2077,15 +2098,16 @@ require([
                     return config.layer;
                 });
                 const mineFeatureLayers = mineFeatureLayerConfigs.map((config) => {
+                    const metadataFields = config.metadataFields || mineFeatureMetadataFields;
                     const fieldInfos = [
                         { fieldName: config.featureField, label: config.featureFieldLabel },
-                        ...mineFeatureMetadataFields,
+                        ...metadataFields,
                     ];
 
                     config.layer = new FeatureLayer({
                         id: config.id,
                         title: config.title,
-                        url: mineFeatureServerURL + config.layerId,
+                        url: config.url || mineFeatureServerURL + config.layerId,
                         outFields: ['*'],
                         visible: false,
                         popupTemplate: {
@@ -2273,13 +2295,15 @@ require([
                     container: 'retaining-wall-feature-table-container',
                 });
                 mineFeatureLayerConfigs.forEach((config) => {
+                    const metadataFields = config.metadataFields || mineFeatureMetadataFields;
+
                     config.featureTable = new FeatureTable({
                         view,
                         layer: config.layer,
                         tableTemplate: {
                             columnTemplates: [
                                 { type: 'field', fieldName: config.featureField, label: config.featureFieldLabel },
-                                ...mineFeatureMetadataFields.map((field) => ({ type: 'field', ...field })),
+                                ...metadataFields.map((field) => ({ type: 'field', ...field })),
                             ],
                         },
                         container: config.tableContainer,
@@ -2569,13 +2593,7 @@ require([
                         {
                             text: 'Back',
                             action: () => {
-                                const mapContainer = document.getElementById('map-container');
-                                const potreeContainer = document.getElementById('potree-container');
-                                const featureTabContainer = document.querySelector('.feature-tab-container');
-
-                                featureTabContainer.classList.add('hidden');
-                                mapContainer.classList.add('hidden');
-                                potreeContainer.classList.remove('hidden');
+                                setPotreeViewerVisible(true);
                                 tour.back();
                             },
                         },

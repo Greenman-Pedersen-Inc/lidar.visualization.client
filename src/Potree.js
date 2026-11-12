@@ -108,12 +108,12 @@ export const debug = {};
 let scriptPath = '';
 
 if (document.currentScript && document.currentScript.src) {
-    scriptPath = new URL(document.currentScript.src + '/..').href;
+    scriptPath = new URL('.', document.currentScript.src).href;
     if (scriptPath.slice(-1) === '/') {
         scriptPath = scriptPath.slice(0, -1);
     }
 } else if (import.meta) {
-    scriptPath = new URL(import.meta.url + '/..').href;
+    scriptPath = new URL('.', import.meta.url).href;
     if (scriptPath.slice(-1) === '/') {
         scriptPath = scriptPath.slice(0, -1);
     }

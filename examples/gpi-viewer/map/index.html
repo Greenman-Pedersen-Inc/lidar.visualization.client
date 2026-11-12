@@ -82,13 +82,14 @@
         <script src="../../../libs/openlayers3/ol.js?v=20261112.1"></script>
         <script src="../../../libs/i18next/i18next.js?v=20261112.1"></script>
         <script src="../../../libs/jstree/jstree.js?v=20261112.1"></script>
-        <script src="../../../build/potree/potree.js?v=20261112.1"></script>
+        <!-- Potree 1.8 derives its resource directory from this URL, so this legacy bundle must remain query-free. -->
+        <script src="../../../build/potree/potree.js"></script>
         <script src="../../../libs/plasio/js/laslaz.js?v=20261112.1"></script>
         <script src="../../../libs/shapefile/shapefile.js?v=20261112.1"></script>
 
         <script src="https://js.arcgis.com/4.31/"></script>
         <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
 
-        <script type="module" src="index.js?v=20261112.1"></script>
+        <script type="module" src="index.js?v=20261112.3"></script>
     </body>
 </html>
