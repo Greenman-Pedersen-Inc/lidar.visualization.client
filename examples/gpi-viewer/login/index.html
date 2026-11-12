@@ -3,20 +3,23 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
         <meta
             http-equiv="Content-Security-Policy"
             content="default-src 'self'; base-uri 'self'; connect-src 'self' https://maps.gpinet.com http://127.0.0.1:65000 http://localhost:65000; form-action 'self'; img-src 'self'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'"
         />
         <meta name="referrer" content="no-referrer" />
         <title>NJDOT GAMS: Login</title>
-        <link rel="icon" href="../map/favicon.ico" />
+        <link rel="icon" href="../map/favicon.ico?v=20261112.1" />
         <style>
             body {
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 height: 100vh;
-                background-image: url(background.jpg);
+                background-image: url(background.jpg?v=20261112.1);
                 background-repeat: no-repeat;
                 background-size: cover;
                 background-color: #f0f2f5;
@@ -167,6 +170,6 @@
             </form>
         </div>
 
-        <script src="login.js" defer></script>
+        <script src="login.js?v=20261112.1" defer></script>
     </body>
 </html>

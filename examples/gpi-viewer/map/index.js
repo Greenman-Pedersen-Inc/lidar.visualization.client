@@ -149,6 +149,7 @@ require([
     // const pauseButton = document.getElementById('pause-button');
     const closeLidarViewerButton = document.getElementById('close-lidar-viewer-button');
     const restartTourButton = document.getElementById('restart-tour-button');
+    const runListUnavailableAlert = document.getElementById('run-list-unavailable');
 
     const CRED = 'gams_auth_session';
     window.localStorage.removeItem('cred_location_storage');
@@ -178,7 +179,7 @@ require([
             setTimeout(redirectToLogin, expiryTime);
             return fetch(baseURL + 'run_list', {
                 method: 'GET', // or POST, PUT, DELETE, etc.
-                // cache: 'no-store',
+                cache: 'no-store',
                 headers: {
                     token: credentials.token,
                 },
@@ -189,16 +190,18 @@ require([
                     } else {
                         if (response.status === 401) {
                             redirectToLogin();
-                            throw new Error('The current login session is not valid.');
-                        } else if (isLocalHost) {
-                            console.warn(`Unable to load the local LiDAR run list (status ${response.status}). Continuing without local run data.`);
                             return {
                                 tree: { children: [] },
                                 flatList: [],
                             };
-                        } else {
-                            throw new Error('Failed to fetch data from the server. Please try refreshing the page.');
                         }
+
+                        console.warn(`Unable to load the LiDAR run list (status ${response.status}). Continuing without run data.`);
+                        runListUnavailableAlert?.setAttribute('open', '');
+                        return {
+                            tree: { children: [] },
+                            flatList: [],
+                        };
                     }
                 })
                 .then((data) => {
@@ -215,6 +218,11 @@ require([
                     });
 
                     return data.flatList;
+                })
+                .catch((error) => {
+                    console.error('Unable to load the LiDAR run list. Continuing without run data.', error);
+                    runListUnavailableAlert?.setAttribute('open', '');
+                    return [];
                 });
         } else {
             redirectToLogin();
