@@ -104,6 +104,7 @@ require([
         {
             id: 'mine-geophysical-lines',
             title: 'Geophysical Lines',
+            layerType: 'line',
             layerId: 6,
             featureField: 'line_feature',
             featureFieldLabel: 'Line feature',
@@ -111,6 +112,7 @@ require([
         {
             id: 'mine-gpr-lines',
             title: 'GPR Lines',
+            layerType: 'line',
             layerId: 4,
             featureField: 'line_feature',
             featureFieldLabel: 'Line feature',
@@ -118,6 +120,7 @@ require([
         {
             id: 'mine-geophysical-area',
             title: 'Geophysical Area',
+            layerType: 'polygon',
             layerId: 5,
             featureField: 'poly_feature',
             featureFieldLabel: 'Polygon feature',
@@ -125,6 +128,7 @@ require([
         {
             id: 'mine-gravity-stations',
             title: 'Gravity Stations',
+            layerType: 'point',
             layerId: 3,
             featureField: 'point_feature',
             featureFieldLabel: 'Point feature',
@@ -132,6 +136,7 @@ require([
         {
             id: 'mine-magnetic-stations',
             title: 'Magnetic Stations',
+            layerType: 'line',
             layerId: 2,
             featureField: 'line_feature',
             featureFieldLabel: 'Line feature',
@@ -139,6 +144,7 @@ require([
         {
             id: 'njdep-abandoned-mines',
             title: 'Abandoned Mines (NJDEP)',
+            layerType: 'point',
             url: 'https://mapsdep.nj.gov/arcgis/rest/services/Features/Geology/MapServer/0',
             featureField: 'SITENAME',
             featureFieldLabel: 'Site name',
@@ -163,6 +169,12 @@ require([
         { fieldName: 'testing_firm', label: 'Testing firm' },
         { fieldName: 'comments', label: 'Comments' },
     ];
+    const geophysicalLayerTypePriority = {
+        point: 0,
+        line: 1,
+        polygon: 2,
+        raster: 3,
+    };
 
     // const playButton = document.getElementById('play-button');
     // const pauseButton = document.getElementById('pause-button');
@@ -1561,6 +1573,26 @@ require([
                 const menu = document.createElement('details');
                 const menuButton = document.createElement('summary');
                 const menuOptions = document.createElement('div');
+                let draggedOption = null;
+
+                const updateMapLayerOrder = () => {
+                    const orderedConfigs = Array.from(menuOptions.children)
+                        .map((option) => configs.find((config) => config.id === option.dataset.layerId))
+                        .filter(Boolean);
+                    const layerIndexes = orderedConfigs.map((config) => map.layers.indexOf(config.layer)).filter((index) => index >= 0);
+
+                    if (layerIndexes.length !== orderedConfigs.length) {
+                        return;
+                    }
+
+                    const bottomIndex = Math.min(...layerIndexes);
+                    orderedConfigs
+                        .slice()
+                        .reverse()
+                        .forEach((config, index) => {
+                            map.reorder(config.layer, bottomIndex + index);
+                        });
+                };
 
                 menu.className = 'geophysical-layer-menu esri-widget';
                 menuButton.className = 'geophysical-layer-menu-button';
@@ -1570,6 +1602,8 @@ require([
 
                 configs.forEach((config) => {
                     const option = document.createElement('div');
+                    const dragHandle = document.createElement('span');
+                    const dragIcon = document.createElement('i');
                     const toggle = document.createElement('label');
                     const checkbox = document.createElement('input');
                     const labelText = document.createElement('span');
@@ -1577,11 +1611,22 @@ require([
                     const centerIcon = document.createElement('i');
 
                     option.className = 'geophysical-layer-option';
+                    option.dataset.layerId = config.id;
+                    dragHandle.className = 'geophysical-layer-drag-handle';
+                    dragHandle.draggable = true;
+                    dragHandle.tabIndex = 0;
+                    dragHandle.title = `Reorder ${config.title}`;
+                    dragHandle.setAttribute('role', 'button');
+                    dragHandle.setAttribute('aria-label', `Reorder ${config.title}. Use the up and down arrow keys or drag to move.`);
+                    dragIcon.className = 'bi bi-grip-vertical';
+                    dragIcon.setAttribute('aria-hidden', 'true');
+                    dragHandle.append(dragIcon);
                     toggle.className = 'geophysical-layer-toggle';
                     checkbox.type = 'checkbox';
                     checkbox.checked = config.layer.visible;
                     checkbox.setAttribute('aria-label', `Show ${config.title}`);
                     labelText.textContent = config.title;
+                    labelText.title = config.title;
                     centerButton.className = 'geophysical-layer-center-button';
                     centerButton.type = 'button';
                     centerButton.title = `Center map on ${config.title}`;
@@ -1590,6 +1635,45 @@ require([
                     centerIcon.className = 'bi bi-crosshair2';
                     centerIcon.setAttribute('aria-hidden', 'true');
                     centerButton.append(centerIcon);
+
+                    dragHandle.addEventListener('dragstart', (event) => {
+                        draggedOption = option;
+                        option.classList.add('dragging');
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('text/plain', config.id);
+                    });
+                    dragHandle.addEventListener('dragend', () => {
+                        option.classList.remove('dragging');
+                        draggedOption = null;
+                        updateMapLayerOrder();
+                    });
+                    dragHandle.addEventListener('keydown', (event) => {
+                        if (event.key === 'ArrowUp' && option.previousElementSibling) {
+                            event.preventDefault();
+                            menuOptions.insertBefore(option, option.previousElementSibling);
+                            updateMapLayerOrder();
+                        } else if (event.key === 'ArrowDown' && option.nextElementSibling) {
+                            event.preventDefault();
+                            menuOptions.insertBefore(option.nextElementSibling, option);
+                            updateMapLayerOrder();
+                        }
+                    });
+                    option.addEventListener('dragover', (event) => {
+                        if (!draggedOption || draggedOption === option) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'move';
+
+                        const bounds = option.getBoundingClientRect();
+                        const insertAfter = event.clientY > bounds.top + bounds.height / 2;
+                        menuOptions.insertBefore(draggedOption, insertAfter ? option.nextElementSibling : option);
+                    });
+                    option.addEventListener('drop', (event) => {
+                        event.preventDefault();
+                        updateMapLayerOrder();
+                    });
 
                     checkbox.addEventListener('change', () => {
                         setGeophysicalLayerVisibility(config, checkbox.checked);
@@ -1602,7 +1686,27 @@ require([
                         }
 
                         try {
-                            await view.goTo(extent.expand(1.2));
+                            await view.goTo(extent.expand(1.2), {
+                                animate: !config.layer.tileInfo,
+                            });
+
+                            if (config.layer.tileInfo) {
+                                const lodScales = config.layer.tileInfo.lods.map((lod) => lod.scale).filter(Number.isFinite);
+                                const mostDetailedLodScale = lodScales.length > 0 ? Math.min(...lodScales) : 0;
+                                const configuredMaxScale = config.layer.maxScale > 0 ? config.layer.maxScale : 0;
+                                const mostDetailedVisibleScale = Math.max(mostDetailedLodScale, configuredMaxScale);
+
+                                if (mostDetailedVisibleScale > 0 && view.scale < mostDetailedVisibleScale) {
+                                    await view.goTo(
+                                        {
+                                            center: extent.center,
+                                            scale: mostDetailedVisibleScale * 1.05,
+                                        },
+                                        { animate: false },
+                                    );
+                                }
+                            }
+
                             menu.removeAttribute('open');
                         } catch (error) {
                             if (error.name !== 'AbortError') {
@@ -1621,7 +1725,7 @@ require([
                         });
 
                     toggle.append(checkbox, labelText);
-                    option.append(toggle, centerButton);
+                    option.append(dragHandle, toggle, centerButton);
                     menuOptions.append(option);
                 });
 
@@ -2128,7 +2232,12 @@ require([
 
                     return config.layer;
                 });
-                const allGeophysicalLayerConfigs = [...geophysicalLayerConfigs, ...mineFeatureLayerConfigs];
+                const allGeophysicalLayerConfigs = [...geophysicalLayerConfigs, ...mineFeatureLayerConfigs].sort((a, b) => {
+                    const aPriority = geophysicalLayerTypePriority[a.layerType || 'raster'];
+                    const bPriority = geophysicalLayerTypePriority[b.layerType || 'raster'];
+
+                    return aPriority - bPriority;
+                });
 
                 legend.layerInfos.push({ layer: retainingWallFeatureLayer, title: 'Retaining Wall' });
                 legend.layerInfos.push({ layer: rockSlopeFeatureLayer, title: 'Rock & Soil Slope' });
@@ -2224,7 +2333,12 @@ require([
                 );
 
                 // map.add(elevationLayer); // adds the layer to the map
-                map.addMany([...geophysicalLayers, ...mineFeatureLayers]); // keeps the optional geophysical layers below the primary asset layers
+                map.addMany(
+                    allGeophysicalLayerConfigs
+                        .slice()
+                        .reverse()
+                        .map((config) => config.layer),
+                ); // keeps points above lines, lines above polygons, and rasters at the bottom
                 map.add(stateOutline); // adds the layer to the map
                 map.add(runCoverageFeatureLayer); // adds the layer to the map
                 map.add(retainingWallFeatureLayer); // adds the layer to the map

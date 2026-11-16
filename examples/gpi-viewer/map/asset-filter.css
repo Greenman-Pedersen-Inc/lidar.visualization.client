@@ -93,6 +93,8 @@ tr {
 .filter-box {
     position: absolute;
     z-index: 100;
+    box-sizing: border-box;
+    max-width: calc(100vw - 20px);
     background-color: rgba(255, 255, 255, 1);
     padding: 10px;
     box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
@@ -163,6 +165,8 @@ div [title='View signal details'] {
 
 .attribute-row {
     display: flex;
+    width: 100%;
+    min-width: 0;
     margin-top: 3px;
     gap: 3px;
 }
@@ -653,7 +657,9 @@ tr.highlight {
 }
 
 .query-editor {
-    min-width: 472.266;
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
     width: 100%;
     height: 50px;
     border: 1px solid lightgrey;
@@ -665,6 +671,7 @@ tr.highlight {
 
 .field-option-selector {
     flex-grow: 1;
+    min-width: 0;
 }
 
 #table-div {

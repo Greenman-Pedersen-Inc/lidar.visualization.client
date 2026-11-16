@@ -2,7 +2,7 @@
 
 const AUTH_STORAGE_KEY = 'gams_auth_session';
 const AUTH_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-    ? 'https://maps.gpinet.com/gpi-viewer/data/v1/'
+    ? 'http://127.0.0.1:65000/v1/'
     : '../data/v1/';
 window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
 const form = document.querySelector('#login-form');

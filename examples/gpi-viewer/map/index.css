@@ -175,7 +175,7 @@ input[type='text'] {
 
 .geophysical-layer-menu {
     position: relative;
-    width: 200px;
+    width: min(280px, calc(100vw - 20px));
     color: #323232;
     background: white;
     box-shadow: 0 1px 2px rgb(0 0 0 / 30%);
@@ -243,6 +243,31 @@ input[type='text'] {
     background: #f3f3f3;
 }
 
+.geophysical-layer-option.dragging {
+    background: #e2f1fb;
+    opacity: 0.65;
+}
+
+.geophysical-layer-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    align-self: stretch;
+    color: #6e6e6e;
+    cursor: grab;
+    touch-action: none;
+}
+
+.geophysical-layer-drag-handle:active {
+    cursor: grabbing;
+}
+
+.geophysical-layer-drag-handle:focus-visible {
+    outline: 2px solid #005e95;
+    outline-offset: -2px;
+}
+
 .geophysical-layer-toggle {
     display: flex;
     flex: 1;
@@ -254,6 +279,7 @@ input[type='text'] {
 }
 
 .geophysical-layer-toggle span {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
